@@ -15,8 +15,7 @@ if (!window.location.origin) {
 }
 
 const errorMessages = {
-    503: 'Tower or its dependencies appear to be unavailable at the moment.',
-    401: 'Forbidden, your SSO session may have expired. Try refreshing your browser.'
+    404: 'Not found.'
 };
 
 function errorHandler(message, store) {
@@ -69,32 +68,12 @@ function postAndUnwrap(endpoint, data) {
         });
 }
 
-function fetchSession(store) {
-    store.trigger({message: {}});
-    getAndUnwrap(`${window.location.origin}/ajax/check`)
-        .then(data => {
-            store.setState(data);
-            if (!data.displayLogin && !data.hasSession) {
-                store.setState({message: {
-                    context: 'warning',
-                    text: 'Your session has logged out or expired, try restarting your SSO attempt.'
-                }});
-            }
-        })
-        .catch(errorHandler('Problem checking validity.', store));
-}
-
 export default class EmpholiteStore extends Reflux.Store {
     constructor() {
         super();
         this.state = {
             message: {},
-            userDetails: {},
-            hasSession: false,
-            displayLogin: false,
-            signOutUrls: [],
-            profileInRequest: false,
-            profileInSession: false
+            showResponseDialog: false
         };
         this.listenToMany(EmpholiteActions);
     }
@@ -103,22 +82,21 @@ export default class EmpholiteStore extends Reflux.Store {
         this.setState({message: {}});
     }
 
-    onFetchSession() {
-        fetchSession(this);
-    }
-
-    onUpdateUserDetail(name, value) {
-        let userDetails = Object.assign({}, this.state.userDetails);
-        userDetails[name] = value;
-        this.setState({userDetails});
-    }
-
-    onLogin() {
-        EmpholiteActions.clearMessage();
-        postAndUnwrap(`${window.location.origin}/ajax/login`, this.state.userDetails)
-            .then(({redirectUri}) => {
-                window.location = redirectUri;
+    onFetchResponses() {
+        this.trigger({message: {}});
+        getAndUnwrap(`${window.location.origin}/ajax/list`)
+            .then(data => {
+                this.setState(data);
             })
-            .catch(errorHandler('Problem logging in.', this));
+            .catch(errorHandler('Problem fetching responses.', this));
+    }
+
+    onShowResponseDialog() {
+        this.trigger({message: {}});
+        this.trigger({showResponseDialog: true});
+    }
+
+    onHideResponseDialog() {
+        this.trigger({showResponseDialog: false});
     }
 }
