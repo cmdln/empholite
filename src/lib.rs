@@ -4,7 +4,6 @@ extern crate hyper;
 extern crate iron;
 #[macro_use]
 extern crate log;
-extern crate mime;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
@@ -12,9 +11,9 @@ extern crate serde_derive;
 extern crate serde_json;
 
 pub use error::EmpholiteError;
-pub use index::IndexHandler;
+pub use handlers::index::IndexHandler;
 
 mod error;
-mod index;
+mod handlers;
 
 pub type Result<T> = std::result::Result<T, EmpholiteError>;

@@ -35,10 +35,18 @@ fn bootstrap() -> Result<()> {
 
     env_logger::init().unwrap();
 
-    let host: String = env::var("EMPHOLITE_HOST").unwrap_or("0.0.0.0".into());
-    let port: i32 = env::var("EMPHOLITE_PORT").unwrap_or("8080".into())
-            .parse()
-            .map_err(|_| EmpholiteError::Custom("Could not parse port as a number.".into()))?;
+    // TODO set up diesel middleware
+
+    bootstrap_config()?;
+    // TODO bootstrap another listener for mock routes
+    Ok(())
+}
+
+fn bootstrap_config() -> Result<()> {
+    let host: String = env::var("EMPHOLITE_CONFIG_HOST").unwrap_or("0.0.0.0".into());
+    let port: i32 = env::var("EMPHOLITE_CONFIG_PORT").unwrap_or("8080".into())
+        .parse()
+        .map_err(|_| EmpholiteError::Custom("Could not parse port as a number.".into()))?;
     let client_path = env::var("EMPHOLITE_CLIENT_PATH").unwrap_or("./target/client".to_owned());
 
     let mut router = Router::new();
@@ -58,6 +66,7 @@ fn bootstrap() -> Result<()> {
     chain.link_after(logger_after);
 
     let address: &str = &format!("{}:{}", host, port);
-    Iron::new(chain).http(address).map_err(|_| EmpholiteError::Custom("Could not start server".to_owned()))?;
+    Iron::new(chain).http(address)
+        .map_err(|_| EmpholiteError::Custom("Could not start server".to_owned()))?;
     Ok(())
 }

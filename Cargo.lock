@@ -8,7 +8,6 @@ dependencies = [
  "iron 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "logger 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "mime 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "mount 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "router 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.8 (registry+https://github.com/rust-lang/crates.io-index)",

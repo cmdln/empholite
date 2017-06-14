@@ -3,12 +3,10 @@ use iron::middleware::Handler;
 use iron::modifiers;
 use iron::prelude::*;
 use iron::status;
-use mime;
-use super::Result;
+use Result;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
-use std::str;
 
 pub struct IndexHandler {
     contents: String,
@@ -19,9 +17,7 @@ impl IndexHandler {
         let mut file = File::open(file_path)?;
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
-        Ok(IndexHandler {
-            contents: contents,
-        })
+        Ok(IndexHandler { contents: contents })
     }
 }
 
