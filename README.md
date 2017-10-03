@@ -1,8 +1,8 @@
 Empholite
 =========
-A mock server.
+A modern mock server. A mock server is designed to stand in for other services when performing integration test. It should be able to return all kinds of canned responses for success, failure and edge cases. A modern mock server should be lightweight, easily configurable, and highly scalable. In looking at the field of mock servers already available, none of them seem very modern, being built on heavy weight techologies, requiring a stiff learning curve to get a simple test case running.
 
-The idea of a mock server is that you can configure arbitrary responses to arbitrary endpoints. When working with micro-services you do not always want or need to bootstrap the whole ecosystem. A mock server is a useful tool when working on a single microservice that relies on others.
+The plan for empholite is for it to be relatively stateless, spun up and configured as needed. It will have both a UI and a REST API for describing call and response patterns. SDETs can built up patterns interactively then export configs to be version controlled and bulk loaded when needed. Or test runners can make simple REST calls to set needed response patterns, individual or in bulk, as part of test setup and tear down. It will be able to mock multiple services so that tests can focus on the service under test more easily instead of compounding the costs in effort and resource of providing a live test service ecosystem or even multiple mock servers for each replaced live service.
 
 ## Install
 
