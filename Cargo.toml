@@ -1,18 +1,19 @@
 [package]
 name = "empholite"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Thomas Gideon <cmdln@thecommandline.net>"]
 
 [dependencies]
-dotenv = "0.8"
-env_logger="0.4"
-hyper = "0.10"
-iron = "0.5"
-log = "0.3"
-logger = "0.3"
-mount = "0.3"
-router = "0.5"
+dotenv = "0.10"
+env_logger = "0.4"
+error-chain = "0.11"
+hyper = "0.11"
+iron = "0.6"
+log = "0.4"
+logger = { git = "https://github.com/iron/logger", rev = "59873ba25afe2684935471b9eda5be5d15ecc659" }
+mount = { git = "https://github.com/iron/mount", rev = "d30eeec29191fd10bf66014be9e7e7164300bea0" }
+router = "0.6"
 serde = "1.0"
 serde_derive = "1.0"
 serde_json = "1.0"
-staticfile = "0.4"
+staticfile = "0.5"

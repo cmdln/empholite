@@ -1,4 +1,4 @@
-use hyper::header::ContentType;
+use iron::headers::ContentType;
 use iron::middleware::Handler;
 use iron::modifiers;
 use iron::prelude::*;
