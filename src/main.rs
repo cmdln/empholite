@@ -9,7 +9,7 @@ extern crate mount;
 extern crate router;
 extern crate staticfile;
 
-use empholite::{IndexHandler, Result, ResultExt};
+use empholite::{replay_response, IndexHandler, Result, ResultExt};
 use dotenv::dotenv;
 use iron::prelude::*;
 use logger::Logger;
@@ -67,6 +67,7 @@ fn bootstrap_config() -> Result<()> {
     chain.link_before(logger_before);
     chain.link_after(logger_after);
 
+    replay_response();
     let address: &str = &format!("{}:{}", host, port);
     Iron::new(chain)
         .http(address)
