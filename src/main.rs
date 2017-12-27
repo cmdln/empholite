@@ -9,7 +9,7 @@ extern crate mount;
 extern crate router;
 extern crate staticfile;
 
-use empholite::{EmpholiteError, IndexHandler, Result};
+use empholite::{IndexHandler, Result, ResultExt};
 use dotenv::dotenv;
 use iron::prelude::*;
 use logger::Logger;
@@ -44,9 +44,10 @@ fn bootstrap() -> Result<()> {
 
 fn bootstrap_config() -> Result<()> {
     let host: String = env::var("EMPHOLITE_CONFIG_HOST").unwrap_or("0.0.0.0".into());
-    let port: i32 = env::var("EMPHOLITE_CONFIG_PORT").unwrap_or("8080".into())
+    let port: i32 = env::var("EMPHOLITE_CONFIG_PORT")
+        .unwrap_or("8080".into())
         .parse()
-        .map_err(|_| EmpholiteError::Custom("Could not parse port as a number.".into()))?;
+        .chain_err(|| "Could not parse port as a number.")?;
     let client_path = env::var("EMPHOLITE_CLIENT_PATH").unwrap_or("./target/client".to_owned());
 
     let mut router = Router::new();
@@ -54,7 +55,8 @@ fn bootstrap_config() -> Result<()> {
     router.get("/", IndexHandler::new("./static/index.html")?, "index");
 
     let mut mount = Mount::new();
-    mount.mount("/", router)
+    mount
+        .mount("/", router)
         .mount("/images", Static::new(Path::new("./static/images/")))
         .mount("/client", Static::new(Path::new(&client_path)));
 
@@ -66,7 +68,8 @@ fn bootstrap_config() -> Result<()> {
     chain.link_after(logger_after);
 
     let address: &str = &format!("{}:{}", host, port);
-    Iron::new(chain).http(address)
-        .map_err(|_| EmpholiteError::Custom("Could not start server".to_owned()))?;
+    Iron::new(chain)
+        .http(address)
+        .chain_err(|| "Could not start server")?;
     Ok(())
 }
