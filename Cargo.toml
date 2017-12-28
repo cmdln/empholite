@@ -1,6 +1,6 @@
 [package]
 name = "empholite"
-version = "0.1.3"
+version = "0.1.4"
 authors = ["Thomas Gideon <cmdln@thecommandline.net>"]
 
 [dependencies]
