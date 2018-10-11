@@ -22,7 +22,7 @@ use std::env;
 use std::path::Path;
 use std::thread;
 
-use empholite::{replay_response, IndexHandler, Result, ResultExt};
+use empholite::{init_responses, IndexHandler, Result, ResultExt};
 
 fn main() {
     match bootstrap() {
@@ -67,6 +67,8 @@ fn bootstrap_config() -> Result<()> {
     chain.link_before(logger_before);
     chain.link_after(logger_after);
 
+    debug!("Spinning up web server thread");
+
     // iron's listener blocks the current thread so spin it up in its own thread or else we cannot
     // set up the replay response thread
     let handler: thread::JoinHandle<Result<()>> = thread::spawn(|| {
@@ -82,8 +84,9 @@ fn bootstrap_config() -> Result<()> {
         Ok(())
     });
 
+    debug!("Initializing");
     // set up a replay response process
-    replay_response();
+    init_responses()?;
 
     // on interruption of the replay process, report any error from the web serving thread
     if let Ok(result) = handler.join() {

@@ -12,6 +12,7 @@ extern crate serde;
 extern crate serde_derive;
 #[macro_use]
 extern crate serde_json;
+extern crate tokio_core;
 
 mod error;
 mod handlers;
@@ -19,4 +20,4 @@ mod replay;
 
 pub use error::{Result, ResultExt};
 pub use handlers::index::IndexHandler;
-pub use replay::replay_response;
+pub use replay::init_responses;
