@@ -1,0 +1,10 @@
+[package]
+name = "empholite-client"
+version = "0.2.0"
+authors = ["Thomas Gideon <cmdln@thecommandline.net>"]
+
+[dependencies]
+yew = { git = "https://github.com/DenisKolodin/yew.git", version = "0.5" }
+serde = "1"
+serde_derive = "1"
+serde_json = "1"
