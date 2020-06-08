@@ -1,8 +1,20 @@
+mod components;
+
+use self::components::Home;
 use log::info;
 use wasm_bindgen::prelude::*;
 use yew::prelude::*;
+use yew_router::{prelude::*, switch::Permissive, Switch};
 
-pub struct Index {}
+#[derive(Debug, Switch, Clone, PartialEq)]
+pub(crate) enum AppRoute {
+    #[to = "/page-not-found"]
+    PageNotFound(Permissive<String>),
+    #[to = "/"]
+    Index,
+}
+
+pub(crate) struct Index {}
 
 impl Component for Index {
     type Message = ();
@@ -22,7 +34,18 @@ impl Component for Index {
 
     fn view(&self) -> Html {
         html! {
-            { "Index" }
+            <Router<AppRoute>
+                render = Router::render(|switch: AppRoute| {
+                    match switch {
+                        AppRoute::Index => html! { <Home /> },
+                        AppRoute::PageNotFound(Permissive(None)) => html!{"Page not found"},
+                        AppRoute::PageNotFound(Permissive(Some(missed_route))) => html!{format!("Page '{}' not found", missed_route)}
+                    }
+                })
+                redirect = Router::redirect(|route: Route| {
+                    AppRoute::PageNotFound(Permissive(Some(route.route)))
+                })
+            />
         }
     }
 }
