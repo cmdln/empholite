@@ -3,18 +3,26 @@
 mod config;
 
 use actix_files::{Files, NamedFile};
-use actix_web::{middleware, web::get, App, HttpServer, Result};
+use actix_web::{
+    middleware,
+    web::{get, Data, Json},
+    App, HttpRequest, HttpResponse, HttpServer, Result,
+};
 use dotenv::dotenv;
 use env_logger::Builder;
-use log::info;
-use log::LevelFilter;
+use log::{debug, info, trace, LevelFilter};
+use serde::Deserialize;
 use serde_json::json;
-use std::{env, io::prelude::*};
+use std::{collections::HashMap, env, io::prelude::*, sync::Mutex};
 use time::OffsetDateTime;
 
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
     bootstrap();
+
+    let recipes: HashMap<String, String> = HashMap::new();
+
+    let data = Data::new(Mutex::new(recipes));
 
     let config::ServerConfig {
         bind_address,
@@ -26,9 +34,12 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .wrap(middleware::Logger::default())
+            .app_data(data.clone())
             .route("/favicon", get().to(favicon))
             .route("/favicon.ico", get().to(favicon))
             .route("/pkg/client_bg.wasm", get().to(wasm))
+            .service(save_recipe)
+            .service(serve_recipe)
             .service(Files::new("/client", &client_bundle_path))
             .service(Files::new("/batch{tail:.*}", &static_file_path).index_file("index.html"))
             .service(Files::new("/draft{tail:.*}", &static_file_path).index_file("index.html"))
@@ -85,4 +96,54 @@ async fn favicon() -> Result<NamedFile> {
 
 async fn wasm() -> Result<NamedFile> {
     NamedFile::open(config::WASM.as_str()).map_err(Into::into)
+}
+
+#[derive(Deserialize)]
+struct Recipe {
+    url: String,
+    payload: String,
+}
+
+#[actix_web::post("/ajax/recipe/")]
+async fn save_recipe(
+    recipe: Json<Recipe>,
+    data: Data<Mutex<HashMap<String, String>>>,
+) -> Result<HttpResponse> {
+    let mut data = data.lock().unwrap();
+    let Recipe { url, payload } = recipe.into_inner();
+    data.insert(url, payload);
+    Ok(HttpResponse::Ok().body("Success!"))
+}
+
+#[actix_web::get("/api{tail:.*}")]
+async fn serve_recipe(
+    request: HttpRequest,
+    data: Data<Mutex<HashMap<String, String>>>,
+) -> Result<HttpResponse> {
+    let cx_info = request.connection_info();
+    let scheme = cx_info.scheme();
+    let host = cx_info.host();
+    trace!("Scheme {}", scheme);
+    trace!("Host {:?}", host);
+    let uri = request.uri();
+    trace!("URI {:?}", uri);
+    let key = format!(
+        "{}://{}{}",
+        request.connection_info().scheme(),
+        host,
+        uri.path_and_query()
+            .map(|pq| pq.as_str())
+            .unwrap_or_else(|| "")
+    );
+    debug!("Recipe key {}", key);
+    let data = data.lock().unwrap();
+    trace!("Recipes {:?}", data);
+    if let Some(payload) = data.get(&key) {
+        Ok(HttpResponse::Ok().body(payload))
+    } else {
+        Ok(HttpResponse::NotFound().body(format!(
+            "Could not find a recipe for requested URI, {}",
+            key
+        )))
+    }
 }

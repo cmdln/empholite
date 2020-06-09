@@ -1,3 +1,4 @@
+#![recursion_limit = "1024"]
 mod components;
 
 use self::components::Home;
