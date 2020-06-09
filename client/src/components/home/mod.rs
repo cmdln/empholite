@@ -3,17 +3,12 @@ mod actions;
 use bootstrap_rs::{
     input::InputType, prelude::*, Card, CardBody, Container, Input, InputGroup, Jumbotron, TextArea,
 };
-use serde::Serialize;
+use log::debug;
+use shared::Recipe;
 use yew::{
     prelude::*,
     services::{fetch::FetchTask, FetchService},
 };
-
-#[derive(Serialize, Default)]
-struct Recipe {
-    url: String,
-    payload: String,
-}
 
 pub(crate) struct Home {
     link: ComponentLink<Self>,
@@ -54,6 +49,7 @@ impl Component for Home {
             Self::Message::Fetch => self.handle_fetch(),
             Self::Message::Fetched(body) => self.handle_fetched(body),
             Self::Message::UrlChanged(url) => {
+                debug!("Url changed, {}", url);
                 self.state.url = url;
                 Ok(true)
             }
@@ -80,7 +76,6 @@ impl Component for Home {
     }
 
     fn view(&self) -> Html {
-        let value = "http://test.local:8989/api/foo".to_owned();
         html! {
             <Container>
                 <Jumbotron margin=Margin(Edge::Bottom, 3)>
@@ -94,7 +89,7 @@ impl Component for Home {
                 <Card border=Border(Edge::All, Color::Primary)>
                     <CardBody>
                         <InputGroup>
-                            <Input input_type=InputType::Text value=value on_change=self.link.callback(|value| Msg::UrlChanged(value))/>
+                            <Input input_type=InputType::Text value=self.state.url.clone() on_change=self.link.callback(|value| Msg::UrlChanged(value))/>
                         </InputGroup>
                         <TextArea name="recipe" on_change=self.link.callback(|value| Msg::RecipeChanged(value))>
                         </TextArea>

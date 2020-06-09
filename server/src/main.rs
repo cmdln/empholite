@@ -11,8 +11,8 @@ use actix_web::{
 use dotenv::dotenv;
 use env_logger::Builder;
 use log::{debug, info, trace, LevelFilter};
-use serde::Deserialize;
 use serde_json::json;
+use shared::Recipe;
 use std::{collections::HashMap, env, io::prelude::*, sync::Mutex};
 use time::OffsetDateTime;
 
@@ -96,12 +96,6 @@ async fn favicon() -> Result<NamedFile> {
 
 async fn wasm() -> Result<NamedFile> {
     NamedFile::open(config::WASM.as_str()).map_err(Into::into)
-}
-
-#[derive(Deserialize)]
-struct Recipe {
-    url: String,
-    payload: String,
 }
 
 #[actix_web::post("/ajax/recipe/")]

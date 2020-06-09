@@ -7,7 +7,9 @@ clean:
 client/pkg/client_bg.wasm: client/main.js \
 	client/src/components/*.rs \
 	client/src/components/home/*.rs \
-	client/src/lib.rs
+	client/src/lib.rs \
+	shared/src/*.rs \
+	shared/src/lib.rs
 	mkdir -p client/pkg
 	wasm-pack build --no-typescript --dev -t web client
 

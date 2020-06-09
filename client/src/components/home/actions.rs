@@ -1,6 +1,6 @@
 use super::{Home, Msg};
 use anyhow::Result;
-use log::error;
+use log::{debug, error};
 use yew::{
     format::Text,
     prelude::*,
@@ -9,6 +9,7 @@ use yew::{
 
 impl Home {
     pub(super) fn handle_fetch(&mut self) -> Result<ShouldRender> {
+        debug!("Recipe {:?}", self.state);
         let request = Request::post("/ajax/recipe/")
             .header("Content-Type", "application/json")
             .body(serde_json::to_string(&self.state).map_err(anyhow::Error::from))

@@ -8,6 +8,7 @@ edition = "2018"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+shared = { path = "../shared" }
 bootstrap-rs = { git = "https://github.com/cmdln/bootstrap-rs.git", version="0.2.0" }
 yew = "~0.16.2"
 log = "~0.4.8"
