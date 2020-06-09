@@ -2,7 +2,7 @@ use super::{Home, Msg};
 use anyhow::Result;
 use log::{debug, error};
 use yew::{
-    format::{Nothing, Text},
+    format::Text,
     prelude::*,
     services::fetch::{Request, Response, StatusCode},
 };
@@ -10,8 +10,9 @@ use yew::{
 impl Home {
     pub(super) fn handle_fetch(&mut self) -> Result<ShouldRender> {
         debug!("Recipe {:?}", self.state);
-        let request = Request::get("/ajax/recipe/")
-            .body(Nothing)
+        let request = Request::post("/ajax/recipe/")
+            .header("Content-Type", "application/json")
+            .body(serde_json::to_string(&self.state).map_err(anyhow::Error::from))
             .map_err(anyhow::Error::from)?;
         let task = self.fetch_svc.fetch(
             request,
@@ -33,7 +34,7 @@ impl Home {
     }
 
     pub(super) fn handle_fetched(&mut self, body: String) -> Result<ShouldRender> {
-        self.state = serde_json::from_str(&body)?;
+        self.message = body;
         self.fetch_tsk = None;
         Ok(true)
     }

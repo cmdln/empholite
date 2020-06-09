@@ -453,8 +453,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "bootstrap-rs"
-version = "0.2.0"
-source = "git+https://github.com/cmdln/bootstrap-rs.git#71871f718970070a68566ae6f03da4b388db808c"
+version = "0.2.1"
+source = "git+https://github.com/cmdln/bootstrap-rs.git#0645abe895914f4ea7d1b29eb973f9a227b6b146"
 dependencies = [
  "anyhow 1.0.31 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -539,7 +539,7 @@ name = "client"
 version = "0.0.1"
 dependencies = [
  "anyhow 1.0.31 (registry+https://github.com/rust-lang/crates.io-index)",
- "bootstrap-rs 0.2.0 (git+https://github.com/cmdln/bootstrap-rs.git)",
+ "bootstrap-rs 0.2.1 (git+https://github.com/cmdln/bootstrap-rs.git)",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.111 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.53 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2156,7 +2156,7 @@ dependencies = [
 "checksum bitflags 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "cf1de2fe8c75bc145a2f577add951f8134889b4795d47466a54a5c846d691693"
 "checksum blake2b_simd 0.5.10 (registry+https://github.com/rust-lang/crates.io-index)" = "d8fb2d74254a3a0b5cac33ac9f8ed0e44aa50378d9dbb2e5d83bd21ed1dc2c8a"
 "checksum boolinator 2.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "cfa8873f51c92e232f9bac4065cddef41b714152812bfc5f7672ba16d6ef8cd9"
-"checksum bootstrap-rs 0.2.0 (git+https://github.com/cmdln/bootstrap-rs.git)" = "<none>"
+"checksum bootstrap-rs 0.2.1 (git+https://github.com/cmdln/bootstrap-rs.git)" = "<none>"
 "checksum brotli-sys 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "4445dea95f4c2b41cde57cc9fee236ae4dbae88d8fcbdb4750fc1bb5d86aaecd"
 "checksum brotli2 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "0cb036c3eade309815c15ddbacec5b22c4d1f3983a774ab2eac2e3e9ea85568e"
 "checksum bumpalo 3.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "2e8c087f005730276d1096a652e92a8bacee2e2472bcc9715a74d2bec38b5820"

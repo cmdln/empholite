@@ -39,11 +39,11 @@ async fn main() -> std::io::Result<()> {
             .route("/favicon.ico", get().to(favicon))
             .route("/pkg/client_bg.wasm", get().to(wasm))
             .service(save_recipe)
+            .service(list_recipes)
             .service(serve_recipe)
             .service(Files::new("/client", &client_bundle_path))
-            .service(Files::new("/batch{tail:.*}", &static_file_path).index_file("index.html"))
-            .service(Files::new("/draft{tail:.*}", &static_file_path).index_file("index.html"))
-            .service(Files::new("/inventory{tail:.*}", &static_file_path).index_file("index.html"))
+            .service(Files::new("/add{tail:.*}", &static_file_path).index_file("index.html"))
+            .service(Files::new("/view{tail:.*}", &static_file_path).index_file("index.html"))
             .service(Files::new("/", &static_file_path).index_file("index.html"))
     })
     .bind(bind_address)?
@@ -96,6 +96,19 @@ async fn favicon() -> Result<NamedFile> {
 
 async fn wasm() -> Result<NamedFile> {
     NamedFile::open(config::WASM.as_str()).map_err(Into::into)
+}
+
+#[actix_web::get("/ajax/recipe/")]
+async fn list_recipes(data: Data<Mutex<HashMap<String, String>>>) -> Result<HttpResponse> {
+    let data = data.lock().unwrap();
+    let recipes = data
+        .iter()
+        .map(|(url, payload)| Recipe {
+            url: url.to_owned(),
+            payload: payload.to_owned(),
+        })
+        .collect::<Vec<Recipe>>();
+    Ok(HttpResponse::Ok().json(recipes))
 }
 
 #[actix_web::post("/ajax/recipe/")]

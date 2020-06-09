@@ -1,17 +1,19 @@
-use super::{Home, Msg};
+use super::{Editor, Msg};
+use crate::components::alert::Context;
 use anyhow::Result;
 use log::{debug, error};
 use yew::{
-    format::{Nothing, Text},
+    format::Text,
     prelude::*,
     services::fetch::{Request, Response, StatusCode},
 };
 
-impl Home {
-    pub(super) fn handle_fetch(&mut self) -> Result<ShouldRender> {
+impl Editor {
+    pub(super) fn handle_post(&mut self) -> Result<ShouldRender> {
         debug!("Recipe {:?}", self.state);
-        let request = Request::get("/ajax/recipe/")
-            .body(Nothing)
+        let request = Request::post("/ajax/recipe/")
+            .header("Content-Type", "application/json")
+            .body(serde_json::to_string(&self.state).map_err(anyhow::Error::from))
             .map_err(anyhow::Error::from)?;
         let task = self.fetch_svc.fetch(
             request,
@@ -20,7 +22,7 @@ impl Home {
                     (meta, Ok(body)) if meta.status >= StatusCode::BAD_REQUEST => {
                         Msg::Failure(body)
                     }
-                    (_, Ok(body)) => Msg::Fetched(body),
+                    (_, Ok(body)) => Msg::Posted(body),
                     (_, Err(error)) => {
                         error!("{}", error);
                         Msg::Failure(format!("{}", error))
@@ -32,8 +34,8 @@ impl Home {
         Ok(false)
     }
 
-    pub(super) fn handle_fetched(&mut self, body: String) -> Result<ShouldRender> {
-        self.state = serde_json::from_str(&body)?;
+    pub(super) fn handle_posted(&mut self, body: String) -> Result<ShouldRender> {
+        self.alert_ctx = Context::Success(body);
         self.fetch_tsk = None;
         Ok(true)
     }

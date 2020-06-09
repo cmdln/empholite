@@ -1,26 +1,26 @@
 mod actions;
 
-use bootstrap_rs::{
-    input::InputType, prelude::*, Card, CardBody, Container, Input, InputGroup, Jumbotron, TextArea,
+use crate::{
+    components::{alert::Context, Alert},
+    AppRoute,
 };
-use log::debug;
+use bootstrap_rs::{prelude::*, Card, CardBody, Container, Jumbotron};
 use shared::Recipe;
 use yew::{
     prelude::*,
     services::{fetch::FetchTask, FetchService},
 };
+use yew_router::prelude::*;
 
 pub(crate) struct Home {
     link: ComponentLink<Self>,
     fetch_svc: FetchService,
     fetch_tsk: Option<FetchTask>,
-    state: Recipe,
-    message: String,
+    state: Vec<Recipe>,
+    alert_ctx: Context,
 }
 
 pub(crate) enum Msg {
-    UrlChanged(String),
-    RecipeChanged(String),
     Fetch,
     Fetched(String),
     Failure(String),
@@ -31,16 +31,17 @@ impl Component for Home {
     type Properties = ();
 
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
+        link.send_message(Self::Message::Fetch);
         let fetch_svc = FetchService::new();
         let fetch_tsk = None;
-        let state = Recipe::default();
-        let message = String::default();
+        let state = Vec::new();
+        let alert_ctx = Context::default();
         Self {
             link,
             fetch_svc,
             fetch_tsk,
             state,
-            message,
+            alert_ctx,
         }
     }
 
@@ -48,24 +49,15 @@ impl Component for Home {
         let result = match msg {
             Self::Message::Fetch => self.handle_fetch(),
             Self::Message::Fetched(body) => self.handle_fetched(body),
-            Self::Message::UrlChanged(url) => {
-                debug!("Url changed, {}", url);
-                self.state.url = url;
-                Ok(true)
-            }
-            Self::Message::RecipeChanged(payload) => {
-                self.state.payload = payload;
-                Ok(true)
-            }
             Self::Message::Failure(error) => {
-                self.message = error;
+                self.alert_ctx = Context::Danger(error);
                 Ok(true)
             }
         };
         match result {
             Ok(should_render) => should_render,
             Err(error) => {
-                self.message = format!("{}", error);
+                self.alert_ctx = Context::Danger(format!("{}", error));
                 true
             }
         }
@@ -81,28 +73,38 @@ impl Component for Home {
                 <Jumbotron margin=Margin(Edge::Bottom, 3)>
                     <h1>{ "Empholite" }</h1>
                 </Jumbotron>
-                <Card>
-                    <CardBody class="bg-danger">
-                        { self.message.clone() }
-                    </CardBody>
-                </Card>
+                <Alert context=self.alert_ctx.clone() />
+                { self.view_toolbar() }
                 <Card border=Border(Edge::All, Color::Primary)>
                     <CardBody>
-                        <InputGroup>
-                            <Input input_type=InputType::Text value=self.state.url.clone() on_change=self.link.callback(|value| Msg::UrlChanged(value))/>
-                        </InputGroup>
-                        <TextArea name="recipe" on_change=self.link.callback(|value| Msg::RecipeChanged(value))>
-                        </TextArea>
-                        <div class="mt-3">
-                            <button
-                                class="btn btn-primary"
-                                type="button"
-                                onclick=self.link.callback(|_| Msg::Fetch)
-                            >{ "Save" }</button>
-                        </div>
+                        <ul class="list-group">
+                            { for self.state.iter().map(view_recipe) }
+                        </ul>
                     </CardBody>
                 </Card>
             </Container>
         }
+    }
+}
+
+impl Home {
+    fn view_toolbar(&self) -> Html {
+        html! {
+            <div class="btn-toolbar mb-3">
+                <div class="btn-group">
+                    <RouterButton<AppRoute> classes="btn btn-primary" route=AppRoute::Add>
+                        { "Add Recipe" }
+                    </RouterButton<AppRoute>>
+                </div>
+            </div>
+        }
+    }
+}
+
+fn view_recipe(r: &Recipe) -> Html {
+    html! {
+        <li class="list-group-item">
+            { r.url.clone() }
+        </li>
     }
 }
