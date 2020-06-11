@@ -4,7 +4,6 @@ use crate::components::{alert::Context, Alert};
 use bootstrap_rs::{
     input::InputType, prelude::*, Card, CardBody, Container, Input, Jumbotron, TextArea,
 };
-use log::debug;
 use shared::Recipe;
 use yew::{
     prelude::*,
@@ -49,11 +48,7 @@ impl Component for Editor {
         let result = match msg {
             Self::Message::Post => self.handle_post(),
             Self::Message::Posted(body) => self.handle_posted(body),
-            Self::Message::UrlChanged(url) => {
-                debug!("Url changed, {}", url);
-                self.state.url = url;
-                Ok(true)
-            }
+            Self::Message::UrlChanged(url) => self.handle_url_change(url),
             Self::Message::RecipeChanged(payload) => {
                 self.state.payload = payload;
                 Ok(true)

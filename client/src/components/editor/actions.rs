@@ -1,7 +1,8 @@
 use super::{Editor, Msg};
 use crate::components::alert::Context;
-use anyhow::Result;
-use log::{debug, error};
+use anyhow::{bail, Context as _, Result};
+use http::Uri;
+use log::{debug, error, trace};
 use yew::{
     format::Text,
     prelude::*,
@@ -9,6 +10,11 @@ use yew::{
 };
 
 impl Editor {
+    pub(super) fn handle_url_change(&mut self, url: String) -> Result<ShouldRender> {
+        self.state.url = url;
+        Ok(true)
+    }
+
     pub(super) fn handle_post(&mut self) -> Result<ShouldRender> {
         debug!("Recipe {:?}", self.state);
         let request = Request::post("/ajax/recipe/")
@@ -35,8 +41,54 @@ impl Editor {
     }
 
     pub(super) fn handle_posted(&mut self, body: String) -> Result<ShouldRender> {
+        self.validate()?;
         self.alert_ctx = Context::Success(body);
         self.fetch_tsk = None;
         Ok(true)
     }
+
+    fn validate(&self) -> Result<()> {
+        validate_url(&self.state.url)?;
+        validate_payload(&self.state.payload)?;
+        Ok(())
+    }
+}
+
+fn validate_url(url: &str) -> Result<()> {
+    if url.is_empty() {
+        bail!("The url field is required!")
+    }
+    let uri = url
+        .parse::<Uri>()
+        .with_context(|| format!("Unable to parse, \"{}\", as a uri!", url))?;
+    debug!("Parsed uri as {}", uri);
+    trace!("Host {:?}", uri.host());
+    if uri.host().is_none() {
+        bail!("The url field, \"{}\", must contain a hostname!", url)
+    }
+    trace!("Scheme {:?}", uri.scheme());
+    if uri.scheme().is_none() {
+        bail!(
+            "The url field, \"{}\", must start with a scheme, for example \"https://\"!",
+            url
+        )
+    }
+    trace!("Path and query {:?}", uri.path_and_query());
+    if let Some(path_and_query) = uri.path_and_query() {
+        if !path_and_query.as_str().starts_with("/api") {
+            bail!("The url field, \"{}\", must start with \"/api\"!", url)
+        }
+    } else {
+        bail!(
+            "The url field, \"{}\", must include a path, starting with \"/api\"!",
+            url
+        )
+    }
+    Ok(())
+}
+
+fn validate_payload(payload: &str) -> Result<()> {
+    serde_json::from_str::<serde_json::Value>(payload)
+        .with_context(|| "The payload field must be valid JSON!".to_owned())?;
+    Ok(())
 }
