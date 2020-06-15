@@ -1,9 +1,6 @@
 mod actions;
 
-use bootstrap_rs::{
-    input::InputType, prelude::*, Card, CardBody, Container, Input, InputGroup, Jumbotron, TextArea,
-};
-use log::debug;
+use bootstrap_rs::{prelude::*, Card, CardBody, CardText, Container, Jumbotron};
 use shared::Recipe;
 use yew::{
     prelude::*,
