@@ -1,20 +1,31 @@
 ///! The server that supports the client developers will use for configuration and the dynamic
 ///! endpoint other services will call.
+#[macro_use]
+extern crate diesel;
+
 mod config;
+mod handlers;
+mod models;
+mod schema;
 
 use actix_files::{Files, NamedFile};
 use actix_web::{
     middleware,
-    web::{get, Data, Json},
-    App, HttpRequest, HttpResponse, HttpServer, Result,
+    web::{get, Data},
+    App, HttpServer, Result,
+};
+use chrono::Utc;
+use diesel::{
+    r2d2::{ConnectionManager, Pool},
+    PgConnection,
 };
 use dotenv::dotenv;
 use env_logger::Builder;
-use log::{debug, info, trace, LevelFilter};
+use log::{info, LevelFilter};
 use serde_json::json;
-use shared::Recipe;
 use std::{collections::HashMap, env, io::prelude::*, sync::Mutex};
-use time::OffsetDateTime;
+
+type DbPool = Pool<ConnectionManager<PgConnection>>;
 
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
@@ -26,21 +37,28 @@ async fn main() -> std::io::Result<()> {
 
     let config::ServerConfig {
         bind_address,
+        database_url,
         client_bundle_path,
         static_file_path,
     } = config::server_config().unwrap_or_else(|error| panic!("{}", error));
+
+    let manager: ConnectionManager<PgConnection> = ConnectionManager::new(database_url);
+    let pool = Pool::new(manager)
+        .map_err(|error| std::io::Error::new(std::io::ErrorKind::Other, error))?;
+
     info!("Starting server, listening at {}", bind_address);
 
     HttpServer::new(move || {
         App::new()
             .wrap(middleware::Logger::default())
+            .data(pool.clone())
             .app_data(data.clone())
             .route("/favicon", get().to(favicon))
             .route("/favicon.ico", get().to(favicon))
             .route("/pkg/client_bg.wasm", get().to(wasm))
-            .service(save_recipe)
-            .service(list_recipes)
-            .service(serve_recipe)
+            .service(handlers::save_recipe)
+            .service(handlers::list_recipes)
+            .service(handlers::serve_recipe)
             .service(Files::new("/client", &client_bundle_path))
             .service(Files::new("/add{tail:.*}", &static_file_path).index_file("index.html"))
             .service(Files::new("/view{tail:.*}", &static_file_path).index_file("index.html"))
@@ -64,11 +82,12 @@ fn bootstrap() {
     if let Ok(json_logging) = env::var(ENABLE_JSON_LOGGING) {
         if json_logging.parse().unwrap_or(false) {
             builder.format(|buf, record| {
-                let today = OffsetDateTime::now_utc();
-                let timestamp = today.format("%FT%T");
+                let today = Utc::now();
+                let time = today.format("%FT%T.%f").to_string();
+                let timestamp = today.format("%FT%T").to_string();
                 let result = json!({
-                    "time": timestamp,
-                    "@timestamp": format!("{}.{}Z", timestamp, today.nanosecond()),
+                    "time": time,
+                    "@timestamp": timestamp,
                     "args": format!("{}", record.args()),
                     "level": format!("{}", record.level()),
                     "location": format!("{}:{}",
@@ -96,61 +115,4 @@ async fn favicon() -> Result<NamedFile> {
 
 async fn wasm() -> Result<NamedFile> {
     NamedFile::open(config::WASM.as_str()).map_err(Into::into)
-}
-
-#[actix_web::get("/ajax/recipe/")]
-async fn list_recipes(data: Data<Mutex<HashMap<String, String>>>) -> Result<HttpResponse> {
-    let data = data.lock().unwrap();
-    let recipes = data
-        .iter()
-        .map(|(url, payload)| Recipe {
-            url: url.to_owned(),
-            payload: payload.to_owned(),
-        })
-        .collect::<Vec<Recipe>>();
-    Ok(HttpResponse::Ok().json(recipes))
-}
-
-#[actix_web::post("/ajax/recipe/")]
-async fn save_recipe(
-    recipe: Json<Recipe>,
-    data: Data<Mutex<HashMap<String, String>>>,
-) -> Result<HttpResponse> {
-    let mut data = data.lock().unwrap();
-    let Recipe { url, payload } = recipe.into_inner();
-    data.insert(url, payload);
-    Ok(HttpResponse::Ok().body("Success!"))
-}
-
-#[actix_web::get("/api{tail:.*}")]
-async fn serve_recipe(
-    request: HttpRequest,
-    data: Data<Mutex<HashMap<String, String>>>,
-) -> Result<HttpResponse> {
-    let cx_info = request.connection_info();
-    let scheme = cx_info.scheme();
-    let host = cx_info.host();
-    trace!("Scheme {}", scheme);
-    trace!("Host {:?}", host);
-    let uri = request.uri();
-    trace!("URI {:?}", uri);
-    let key = format!(
-        "{}://{}{}",
-        request.connection_info().scheme(),
-        host,
-        uri.path_and_query()
-            .map(|pq| pq.as_str())
-            .unwrap_or_else(|| "")
-    );
-    debug!("Recipe key {}", key);
-    let data = data.lock().unwrap();
-    trace!("Recipes {:?}", data);
-    if let Some(payload) = data.get(&key) {
-        Ok(HttpResponse::Ok().body(payload))
-    } else {
-        Ok(HttpResponse::NotFound().body(format!(
-            "Could not find a recipe for requested URI, {}",
-            key
-        )))
-    }
 }
