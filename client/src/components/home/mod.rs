@@ -104,7 +104,9 @@ impl Home {
 fn view_recipe(r: &Recipe) -> Html {
     html! {
         <li class="list-group-item">
-            { r.url.clone() }
+            <RouterAnchor<AppRoute> route=AppRoute::View(r.url.clone())>
+                { r.url.clone() }
+            </RouterAnchor<AppRoute>>
         </li>
     }
 }

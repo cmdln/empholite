@@ -9,7 +9,8 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 shared = { path = "../shared" }
-bootstrap-rs = { git = "https://github.com/cmdln/bootstrap-rs.git", version="0.2.1" }
+bootstrap-rs = { git = "https://github.com/cmdln/bootstrap-rs.git", version="0.2.3" }
+#bootstrap-rs = { path = "../../bootstrap-rs" }
 yew = "~0.16.2"
 log = "~0.4.8"
 wasm-bindgen = "~0.2.61"

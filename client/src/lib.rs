@@ -1,7 +1,7 @@
 #![recursion_limit = "1024"]
 mod components;
 
-use self::components::{Editor, Home};
+use self::components::{editor::Mode, Editor, Home};
 use log::info;
 use wasm_bindgen::prelude::*;
 use yew::prelude::*;
@@ -13,8 +13,8 @@ pub(crate) enum AppRoute {
     PageNotFound(Permissive<String>),
     #[to = "/add"]
     Add,
-    #[to = "/view"]
-    View,
+    #[to = "/view/{url}"]
+    View(String),
     #[to = "/"]
     Index,
 }
@@ -44,7 +44,7 @@ impl Component for Index {
                     match switch {
                         AppRoute::Index => html! { <Home /> },
                         AppRoute::Add=> html! { <Editor /> },
-                        AppRoute::View => html! { { "View Recipe" } },
+                        AppRoute::View(url) => html! { <Editor url=url mode=Mode::Edit /> },
                         AppRoute::PageNotFound(Permissive(None)) => html!{"Page not found"},
                         AppRoute::PageNotFound(Permissive(Some(missed_route))) => html!{format!("Page '{}' not found", missed_route)}
                     }

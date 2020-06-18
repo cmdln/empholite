@@ -8,7 +8,6 @@ client/pkg/client_bg.wasm: client/main.js \
 	client/src/components/*.rs \
 	client/src/components/home/*.rs \
 	client/src/components/editor/*.rs \
-	client/src/components/details/*.rs \
 	client/src/components/alert/*.rs \
 	client/src/lib.rs \
 	shared/src/*.rs \

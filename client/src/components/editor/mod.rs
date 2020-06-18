@@ -1,9 +1,10 @@
 mod actions;
+mod types;
+mod view;
 
+pub(crate) use self::types::Mode;
 use crate::components::{alert::Context, Alert};
-use bootstrap_rs::{
-    input::InputType, prelude::*, Card, CardBody, Container, Input, Jumbotron, TextArea,
-};
+use bootstrap_rs::{prelude::*, Card, Container, Jumbotron};
 use shared::Recipe;
 use yew::{
     prelude::*,
@@ -14,23 +15,35 @@ pub(crate) struct Editor {
     link: ComponentLink<Self>,
     fetch_svc: FetchService,
     fetch_tsk: Option<FetchTask>,
+    props: Props,
     state: Recipe,
     alert_ctx: Context,
 }
 
 pub(crate) enum Msg {
+    Fetch,
+    Fetched(String),
     UrlChanged(String),
-    RecipeChanged(String),
+    PayloadChanged(String),
     Post,
     Posted(String),
     Failure(String),
 }
 
+#[derive(Properties, Debug, Clone)]
+pub(crate) struct Props {
+    #[prop_or_default]
+    pub(crate) url: String,
+    #[prop_or_default]
+    pub(crate) mode: Mode,
+}
+
 impl Component for Editor {
     type Message = Msg;
-    type Properties = ();
+    type Properties = Props;
 
-    fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
+    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
+        link.send_message(Self::Message::Fetch);
         let fetch_svc = FetchService::new();
         let fetch_tsk = None;
         let state = Recipe::default();
@@ -39,6 +52,7 @@ impl Component for Editor {
             link,
             fetch_svc,
             fetch_tsk,
+            props,
             state,
             alert_ctx,
         }
@@ -46,17 +60,13 @@ impl Component for Editor {
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         let result = match msg {
+            Self::Message::Fetch => self.handle_fetch(),
+            Self::Message::Fetched(body) => self.handle_fetched(body),
             Self::Message::Post => self.handle_post(),
             Self::Message::Posted(body) => self.handle_posted(body),
             Self::Message::UrlChanged(url) => self.handle_url_change(url),
-            Self::Message::RecipeChanged(payload) => {
-                self.state.payload = payload;
-                Ok(true)
-            }
-            Self::Message::Failure(error) => {
-                self.alert_ctx = Context::Danger(error);
-                Ok(true)
-            }
+            Self::Message::PayloadChanged(payload) => self.handle_payload_change(payload),
+            Self::Message::Failure(error) => self.handle_failure(error),
         };
         match result {
             Ok(should_render) => should_render,
@@ -79,31 +89,13 @@ impl Component for Editor {
                 </Jumbotron>
                 <Alert context=self.alert_ctx.clone() />
                 <Card border=Border(Edge::All, Color::Primary)>
-                    <CardBody>
-                        <div class="form-group">
-                            <label for="url">
-                                { "Endpoint" }
-                            </label>
-                            <Input id="url" input_type=InputType::Text value=self.state.url.clone() on_change=self.link.callback(|value| Msg::UrlChanged(value))/>
-                        </div>
-                        <div class="form-group">
-                            <label for="payload">
-                                { "Payload" }
-                            </label>
-                            <TextArea
-                                name="payload"
-                                value=self.state.payload.clone()
-                                on_change=self.link.callback(|value| Msg::RecipeChanged(value))
-                            />
-                        </div>
-                        <div class="mt-3">
-                            <button
-                                class="btn btn-primary"
-                                type="button"
-                                onclick=self.link.callback(|_| Msg::Post)
-                            >{ "Save" }</button>
-                        </div>
-                    </CardBody>
+                {
+                    if self.props.mode == Mode::View {
+                        self.view_view_body()
+                    } else {
+                        self.view_edit_body()
+                    }
+                }
                 </Card>
             </Container>
         }
