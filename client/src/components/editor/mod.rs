@@ -3,9 +3,11 @@ mod types;
 mod view;
 
 pub(crate) use self::types::Mode;
-use crate::components::{alert::Context, Alert};
+use crate::{
+    components::{alert::Context, Alert},
+    Recipe,
+};
 use bootstrap_rs::{prelude::*, Card, Container, Jumbotron};
-use shared::Recipe;
 use uuid::Uuid;
 use yew::{
     prelude::*,
@@ -32,6 +34,7 @@ pub(crate) enum Msg {
     Post,
     Posted(String),
     Failure(String),
+    ClearAlert,
 }
 
 #[derive(Properties, Debug, Clone)]
@@ -77,6 +80,10 @@ impl Component for Editor {
             Self::Message::UrlChanged(url) => self.handle_url_change(url),
             Self::Message::PayloadChanged(payload) => self.handle_payload_change(payload),
             Self::Message::Failure(error) => self.handle_failure(error),
+            Self::Message::ClearAlert => {
+                self.alert_ctx = Context::None;
+                Ok(true)
+            }
         };
         match result {
             Ok(should_render) => should_render,
@@ -97,7 +104,7 @@ impl Component for Editor {
                 <Jumbotron margin=Margin(Edge::Bottom, 3)>
                     <h1>{ "Empholite" }</h1>
                 </Jumbotron>
-                <Alert context=self.alert_ctx.clone() />
+                <Alert on_close=self.link.callback(|_| Self::Message::ClearAlert) context=self.alert_ctx.clone() />
                 { self.render_breadcrumbs() }
                 { self.render_toolbar() }
                 <Card border=Border(Edge::All, Color::Primary)>

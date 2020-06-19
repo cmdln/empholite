@@ -1,3 +1,4 @@
+use bootstrap_rs::prelude::*;
 use yew::prelude::*;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -15,12 +16,13 @@ impl Default for Context {
 
 pub(crate) struct Alert {
     link: ComponentLink<Self>,
-    context: Context,
+    props: Props,
 }
 
-#[derive(Properties, Debug, Default, Clone)]
+#[derive(Properties, Debug, Default, Clone, PartialEq)]
 pub(crate) struct Props {
     pub(crate) context: Context,
+    pub(crate) on_close: Callback<()>,
 }
 
 impl Component for Alert {
@@ -28,22 +30,20 @@ impl Component for Alert {
     type Message = ();
 
     fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let Props { context } = props;
-        Self { link, context }
+        Self { link, props }
     }
 
     fn update(&mut self, _: Self::Message) -> ShouldRender {
-        self.context = Context::None;
+        self.props.on_close.emit(());
         true
     }
 
     fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        self.context = props.context;
-        true
+        render_on_change(&mut self.props, props)
     }
 
     fn view(&self) -> Html {
-        match self.context {
+        match self.props.context {
             Context::None => view_none(),
             Context::Success(ref message) | Context::Danger(ref message) => {
                 self.view_context(message)
@@ -58,14 +58,14 @@ impl Alert {
             <div class={ format!("alert alert-{}", self.as_class()) }>
                 { m.as_ref() }
                 <button type="button" class="close" data-dismiss="alert" aria-label="Close" onclick=self.link.callback(|_| ())>
-                    <span aria-hidden="true">{ "x" }</span>
+                    <span aria-hidden="true">{ "×" }</span>
                 </button>
             </div>
         }
     }
 
     fn as_class(&self) -> &str {
-        match self.context {
+        match self.props.context {
             Context::Success(_) => "success",
             Context::Danger(_) => "danger",
             Context::None => "",

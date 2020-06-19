@@ -1,7 +1,11 @@
 #![recursion_limit = "1024"]
 mod components;
+mod types;
 
-use self::components::{alert::Context, editor::Mode, Editor, Error, Home};
+use self::{
+    components::{alert::Context, editor::Mode, Editor, Error, Home},
+    types::Recipe,
+};
 use log::info;
 use uuid::Uuid;
 use wasm_bindgen::prelude::*;

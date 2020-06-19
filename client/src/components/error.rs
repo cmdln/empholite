@@ -3,6 +3,7 @@ use bootstrap_rs::{prelude::*, Container};
 use yew::prelude::*;
 
 pub(crate) struct Error {
+    link: ComponentLink<Self>,
     props: Props,
 }
 
@@ -15,8 +16,8 @@ impl Component for Error {
     type Message = ();
     type Properties = Props;
 
-    fn create(props: Self::Properties, _: ComponentLink<Self>) -> Self {
-        Self { props }
+    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
+        Self { link, props }
     }
 
     fn update(&mut self, _: Self::Message) -> ShouldRender {
@@ -30,7 +31,7 @@ impl Component for Error {
     fn view(&self) -> Html {
         html! {
             <Container>
-                <Alert context=self.props.context.clone() />
+                <Alert on_close=self.link.callback(|_| ()) context=self.props.context.clone() />
             </Container>
         }
     }

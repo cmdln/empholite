@@ -53,7 +53,7 @@ impl Editor {
     pub(super) fn handle_fetched(&mut self, body: String) -> Result<ShouldRender> {
         let state: shared::Recipe = serde_json::from_str(&body)
             .with_context(|| "Error parsing JSON when trying to fetch a recipe!")?;
-        self.state = state;
+        self.state = state.into();
         self.fetch_tsk = None;
         Ok(true)
     }
@@ -100,7 +100,10 @@ impl Editor {
 
     pub(super) fn handle_posted(&mut self, body: String) -> Result<ShouldRender> {
         self.validate()?;
-        self.alert_ctx = Context::Success(body);
+        let state: shared::Recipe = serde_json::from_str(&body)?;
+        self.state = state.into();
+        self.alert_ctx = Context::Success("Saved!".into());
+        self.mode = Mode::View;
         self.fetch_tsk = None;
         Ok(true)
     }

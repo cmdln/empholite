@@ -57,7 +57,7 @@ async fn main() -> std::io::Result<()> {
             .route("/favicon.ico", get().to(favicon))
             .route("/pkg/client_bg.wasm", get().to(wasm))
             .service(handlers::get_recipe)
-            .service(handlers::save_recipe)
+            .service(handlers::upsert_recipe)
             .service(handlers::list_recipes)
             .service(handlers::serve_recipe)
             .service(Files::new("/client", &client_bundle_path))

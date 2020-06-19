@@ -24,6 +24,7 @@ pub(crate) enum Msg {
     Fetch,
     Fetched(String),
     Failure(String),
+    ClearAlert,
 }
 
 impl Component for Home {
@@ -53,6 +54,10 @@ impl Component for Home {
                 self.alert_ctx = Context::Danger(error);
                 Ok(true)
             }
+            Self::Message::ClearAlert => {
+                self.alert_ctx = Context::None;
+                Ok(true)
+            }
         };
         match result {
             Ok(should_render) => should_render,
@@ -73,7 +78,7 @@ impl Component for Home {
                 <Jumbotron margin=Margin(Edge::Bottom, 3)>
                     <h1>{ "Empholite" }</h1>
                 </Jumbotron>
-                <Alert context=self.alert_ctx.clone() />
+                <Alert on_close=self.link.callback(|_| Self::Message::ClearAlert) context=self.alert_ctx.clone() />
                 { self.view_toolbar() }
                 <Card border=Border(Edge::All, Color::Primary)>
                     <CardBody>

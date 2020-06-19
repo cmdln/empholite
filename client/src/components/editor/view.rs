@@ -55,13 +55,33 @@ impl Editor {
                 >
                     { "Save" }
                 </button>
-                <button
-                    type="button" onclick=self.link.callback(|_| Msg::Cancel)
-                    class="btn btn-secondary"
-                >
-                    { "Cancel" }
-                </button>
+                {
+                    if self.props.id.is_some() {
+                        self.render_cancel_edit()
+                    } else {
+                        self.render_cancel_add()
+                    }
+                }
             </ButtonGroup>
+        }
+    }
+
+    fn render_cancel_edit(&self) -> Html {
+        html! {
+            <button
+                type="button" onclick=self.link.callback(|_| Msg::Cancel)
+                class="btn btn-secondary"
+            >
+                { "Cancel" }
+            </button>
+        }
+    }
+
+    fn render_cancel_add(&self) -> Html {
+        html! {
+            <RouterButton<AppRoute> route=AppRoute::Index classes="btn btn-secondary">
+                { "Cancel" }
+            </RouterButton<AppRoute>>
         }
     }
 
@@ -95,15 +115,6 @@ impl Editor {
                         on_change=self.link.callback(|value| Msg::PayloadChanged(value))
                     />
                 </FormGroup>
-                <div class="mt-3">
-                    <button
-                        class="btn btn-primary"
-                        type="button"
-                        onclick=self.link.callback(|_| Msg::Post)
-                    >
-                        { "Save" }
-                    </button>
-                </div>
             </CardBody>
         }
     }
