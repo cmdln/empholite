@@ -4,6 +4,7 @@ use bootstrap_rs::{
     input::InputType, Breadcrumb, BreadcrumbItem, ButtonGroup, CardBody, CardHeader, CardText,
     FormGroup, Input, TextArea,
 };
+use validator::ValidationErrors;
 use yew::prelude::*;
 use yew_router::prelude::*;
 
@@ -103,7 +104,14 @@ impl Editor {
                     <label for="url">
                         { "Endpoint" }
                     </label>
-                    <Input id="url" input_type=InputType::Text value=self.state.url.clone() on_change=self.link.callback(|value| Msg::UrlChanged(value))/>
+                    <Input
+                        id="url"
+                        input_type=InputType::Text
+                        value=self.state.url.clone()
+                        on_change=self.link.callback(|value| Msg::UrlChanged(value))
+                        valid=is_valid("url", &self.errors)
+                    />
+                    { render_validation_feedback("url", &self.errors) }
                 </FormGroup>
                 <FormGroup>
                     <label for="payload">
@@ -113,7 +121,9 @@ impl Editor {
                         name="payload"
                         value=self.state.payload.clone()
                         on_change=self.link.callback(|value| Msg::PayloadChanged(value))
+                        valid=is_valid("payload", &self.errors)
                     />
+                    { render_validation_feedback("payload", &self.errors) }
                 </FormGroup>
             </CardBody>
         }
@@ -133,4 +143,27 @@ impl Editor {
             </>
         }
     }
+}
+
+fn render_validation_feedback(field: &'static str, errors: &Option<ValidationErrors>) -> Html {
+    if let Some(ref errors) = errors {
+        let errors = errors.field_errors();
+        if let Some(errors) = errors.get(field) {
+            html! {
+                <div class="invalid-feedback">
+                    { for errors.iter().filter_map(|error| error.message.as_ref()) }
+                </div>
+            }
+        } else {
+            html! {}
+        }
+    } else {
+        html! {}
+    }
+}
+
+fn is_valid(field: &'static str, errors: &Option<ValidationErrors>) -> Option<bool> {
+    errors
+        .as_ref()
+        .map(|errors| !errors.field_errors().contains_key(field))
 }

@@ -2,6 +2,9 @@
 mod components;
 mod types;
 
+#[macro_use]
+extern crate validator_derive;
+
 use self::{
     components::{alert::Context, editor::Mode, Editor, Error, Home},
     types::Recipe,

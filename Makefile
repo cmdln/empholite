@@ -5,6 +5,7 @@ clean:
 	cargo clean
 
 client/pkg/client_bg.wasm: client/main.js \
+	client/src/types/*.rs \
 	client/src/components/*.rs \
 	client/src/components/home/*.rs \
 	client/src/components/editor/*.rs \

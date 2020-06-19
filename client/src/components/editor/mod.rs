@@ -9,6 +9,7 @@ use crate::{
 };
 use bootstrap_rs::{prelude::*, Card, Container, Jumbotron};
 use uuid::Uuid;
+use validator::ValidationErrors;
 use yew::{
     prelude::*,
     services::{fetch::FetchTask, FetchService},
@@ -22,6 +23,7 @@ pub(crate) struct Editor {
     state: Recipe,
     mode: Mode,
     alert_ctx: Context,
+    errors: Option<ValidationErrors>,
 }
 
 pub(crate) enum Msg {
@@ -58,6 +60,7 @@ impl Component for Editor {
         let state = Recipe::default();
         let alert_ctx = Context::default();
         let mode = props.mode.clone();
+        let errors = None;
         Self {
             link,
             fetch_svc,
@@ -66,6 +69,7 @@ impl Component for Editor {
             state,
             mode,
             alert_ctx,
+            errors,
         }
     }
 
