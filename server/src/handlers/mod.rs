@@ -1,12 +1,13 @@
 use crate::{models::Recipe, DbPool};
 use actix_web::{
     error::ErrorInternalServerError,
-    web::{self, Data, Json},
+    web::{self, Data, Json, Path},
     HttpRequest, HttpResponse, Result,
 };
 use diesel::prelude::*;
 use log::{debug, trace};
 use std::{collections::HashMap, sync::Mutex};
+use uuid::Uuid;
 
 #[actix_web::get("/ajax/recipe/")]
 pub(crate) async fn list_recipes(db: Data<DbPool>) -> Result<HttpResponse> {
@@ -17,6 +18,15 @@ pub(crate) async fn list_recipes(db: Data<DbPool>) -> Result<HttpResponse> {
         .map(Recipe::into)
         .collect();
     Ok(HttpResponse::Ok().json(recipes))
+}
+
+#[actix_web::get("/ajax/recipe/{id}")]
+pub(crate) async fn get_recipe(path: Path<Uuid>, db: Data<DbPool>) -> Result<HttpResponse> {
+    let recipe: shared::Recipe = web::block(move || find_recipe(&db, path.into_inner()))
+        .await
+        .map_err(ErrorInternalServerError)?
+        .into();
+    Ok(HttpResponse::Ok().json(recipe))
 }
 
 #[actix_web::post("/ajax/recipe/")]
@@ -69,4 +79,15 @@ fn load_recipes(db: &DbPool) -> anyhow::Result<Vec<Recipe>> {
     let conn = db.get()?;
 
     recipes.load::<Recipe>(&conn).map_err(anyhow::Error::from)
+}
+
+fn find_recipe(db: &DbPool, to_find: Uuid) -> anyhow::Result<Recipe> {
+    use crate::schema::recipes::dsl::*;
+
+    let conn = db.get()?;
+
+    recipes
+        .find(to_find)
+        .first::<Recipe>(&conn)
+        .map_err(anyhow::Error::from)
 }

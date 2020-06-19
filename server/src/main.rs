@@ -56,6 +56,7 @@ async fn main() -> std::io::Result<()> {
             .route("/favicon", get().to(favicon))
             .route("/favicon.ico", get().to(favicon))
             .route("/pkg/client_bg.wasm", get().to(wasm))
+            .service(handlers::get_recipe)
             .service(handlers::save_recipe)
             .service(handlers::list_recipes)
             .service(handlers::serve_recipe)

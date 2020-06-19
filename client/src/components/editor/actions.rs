@@ -1,6 +1,6 @@
 use super::{Editor, Msg};
 use crate::components::alert::Context;
-use anyhow::{bail, Context as _, Result};
+use anyhow::{bail, format_err, Context as _, Result};
 use http::Uri;
 use log::{debug, error, trace};
 use yew::{
@@ -12,9 +12,14 @@ use yew::{
 impl Editor {
     pub(super) fn handle_fetch(&mut self) -> Result<ShouldRender> {
         debug!("Recipe {:?}", self.state);
-        let request = Request::get(format!("/ajax/recipe/{}", self.props.url))
-            .body(Nothing)
-            .map_err(anyhow::Error::from)?;
+        let request = Request::get(format!(
+            "/ajax/recipe/{}",
+            self.props
+                .id
+                .ok_or_else(|| format_err!("Cannot fetch recipe, ID is not set!"))?
+        ))
+        .body(Nothing)
+        .map_err(anyhow::Error::from)?;
         let task = self.fetch_svc.fetch(
             request,
             self.link.callback(

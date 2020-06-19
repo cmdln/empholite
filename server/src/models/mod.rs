@@ -1,11 +1,13 @@
 mod convert;
 
+use crate::schema::recipes;
 use chrono::NaiveDateTime;
+use diesel::{Identifiable, Queryable};
 use uuid::Uuid;
 
 // TODO pass timestamps to transfer type
 #[allow(unused)]
-#[derive(Queryable)]
+#[derive(Queryable, Identifiable)]
 pub(crate) struct Recipe {
     pub(crate) id: Uuid,
     pub(crate) url: String,

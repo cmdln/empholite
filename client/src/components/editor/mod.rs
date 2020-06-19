@@ -6,6 +6,7 @@ pub(crate) use self::types::Mode;
 use crate::components::{alert::Context, Alert};
 use bootstrap_rs::{prelude::*, Card, Container, Jumbotron};
 use shared::Recipe;
+use uuid::Uuid;
 use yew::{
     prelude::*,
     services::{fetch::FetchTask, FetchService},
@@ -33,7 +34,7 @@ pub(crate) enum Msg {
 #[derive(Properties, Debug, Clone)]
 pub(crate) struct Props {
     #[prop_or_default]
-    pub(crate) url: String,
+    pub(crate) id: Option<Uuid>,
     #[prop_or_default]
     pub(crate) mode: Mode,
 }

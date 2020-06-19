@@ -1,6 +1,6 @@
 use yew::prelude::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Context {
     Success(String),
     Danger(String),
