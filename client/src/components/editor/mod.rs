@@ -18,10 +18,13 @@ pub(crate) struct Editor {
     fetch_tsk: Option<FetchTask>,
     props: Props,
     state: Recipe,
+    mode: Mode,
     alert_ctx: Context,
 }
 
 pub(crate) enum Msg {
+    Edit,
+    Cancel,
     Fetch,
     Fetched(String),
     UrlChanged(String),
@@ -44,23 +47,29 @@ impl Component for Editor {
     type Properties = Props;
 
     fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        link.send_message(Self::Message::Fetch);
+        if props.id.is_some() {
+            link.send_message(Self::Message::Fetch);
+        }
         let fetch_svc = FetchService::new();
         let fetch_tsk = None;
         let state = Recipe::default();
         let alert_ctx = Context::default();
+        let mode = props.mode.clone();
         Self {
             link,
             fetch_svc,
             fetch_tsk,
             props,
             state,
+            mode,
             alert_ctx,
         }
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         let result = match msg {
+            Self::Message::Edit => self.handle_edit(),
+            Self::Message::Cancel => self.handle_cancel(),
             Self::Message::Fetch => self.handle_fetch(),
             Self::Message::Fetched(body) => self.handle_fetched(body),
             Self::Message::Post => self.handle_post(),
@@ -89,14 +98,10 @@ impl Component for Editor {
                     <h1>{ "Empholite" }</h1>
                 </Jumbotron>
                 <Alert context=self.alert_ctx.clone() />
+                { self.render_breadcrumbs() }
+                { self.render_toolbar() }
                 <Card border=Border(Edge::All, Color::Primary)>
-                {
-                    if self.props.mode == Mode::View {
-                        self.view_view_body()
-                    } else {
-                        self.view_edit_body()
-                    }
-                }
+                { self.render_body() }
                 </Card>
             </Container>
         }

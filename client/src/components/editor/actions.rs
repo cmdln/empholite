@@ -1,4 +1,4 @@
-use super::{Editor, Msg};
+use super::{types::Mode, Editor, Msg};
 use crate::components::alert::Context;
 use anyhow::{bail, format_err, Context as _, Result};
 use http::Uri;
@@ -10,6 +10,17 @@ use yew::{
 };
 
 impl Editor {
+    pub(super) fn handle_edit(&mut self) -> Result<ShouldRender> {
+        self.mode = Mode::Edit;
+        Ok(true)
+    }
+
+    pub(super) fn handle_cancel(&mut self) -> Result<ShouldRender> {
+        self.mode = Mode::View;
+        self.link.send_message(Msg::Fetch);
+        Ok(false)
+    }
+
     pub(super) fn handle_fetch(&mut self) -> Result<ShouldRender> {
         debug!("Recipe {:?}", self.state);
         let request = Request::get(format!(

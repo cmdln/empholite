@@ -1,9 +1,82 @@
-use super::{Editor, Msg};
-use bootstrap_rs::{input::InputType, CardBody, CardHeader, CardText, FormGroup, Input, TextArea};
+use super::{Editor, Mode, Msg};
+use crate::AppRoute;
+use bootstrap_rs::{
+    input::InputType, Breadcrumb, BreadcrumbItem, ButtonGroup, CardBody, CardHeader, CardText,
+    FormGroup, Input, TextArea,
+};
 use yew::prelude::*;
+use yew_router::prelude::*;
 
 impl Editor {
-    pub(super) fn view_edit_body(&self) -> Html {
+    pub(super) fn render_breadcrumbs(&self) -> Html {
+        html! {
+            <Breadcrumb>
+                <BreadcrumbItem active=false>
+                    <RouterAnchor<AppRoute> route=AppRoute::Index>
+                    { "Recipe Management" }
+                    </RouterAnchor<AppRoute>>
+                </BreadcrumbItem>
+            </Breadcrumb>
+        }
+    }
+
+    pub(super) fn render_toolbar(&self) -> Html {
+        html! {
+            <div
+                class="btn-toolbar mb-3"
+                role="toolbar"
+                aria-label="Toolbar"
+            >
+            {
+                if self.mode == Mode::View {
+                    self.render_view_toolbar()
+                } else {
+                    self.render_edit_toolbar()
+                }
+            }
+            </div>
+        }
+    }
+
+    pub(super) fn render_body(&self) -> Html {
+        if self.mode == Mode::View {
+            self.render_view_body()
+        } else {
+            self.render_edit_body()
+        }
+    }
+
+    fn render_edit_toolbar(&self) -> Html {
+        html! {
+            <ButtonGroup>
+                <button
+                    type="button" onclick=self.link.callback(|_| Msg::Post)
+                    class="btn btn-primary"
+                >
+                    { "Save" }
+                </button>
+                <button
+                    type="button" onclick=self.link.callback(|_| Msg::Cancel)
+                    class="btn btn-secondary"
+                >
+                    { "Cancel" }
+                </button>
+            </ButtonGroup>
+        }
+    }
+
+    fn render_view_toolbar(&self) -> Html {
+        html! {
+                <button
+                    type="button" onclick=self.link.callback(|_| Msg::Edit)
+                    class="btn btn-primary"
+                >
+                    { "Edit" }
+                </button>
+        }
+    }
+
+    fn render_edit_body(&self) -> Html {
         html! {
             <CardBody>
                 <FormGroup>
@@ -35,7 +108,7 @@ impl Editor {
         }
     }
 
-    pub(super) fn view_view_body(&self) -> Html {
+    fn render_view_body(&self) -> Html {
         html! {
             <>
                 <CardHeader>

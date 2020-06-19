@@ -44,10 +44,10 @@ impl Component for Index {
                 render = Router::render(|switch: AppRoute| {
                     match switch {
                         AppRoute::Index => html! { <Home /> },
-                        AppRoute::Add=> html! { <Editor /> },
+                        AppRoute::Add=> html! { <Editor mode=Mode::Edit /> },
                         AppRoute::View(id) =>
                             if let Ok(id) = id.parse::<Uuid>() {
-                            html! { <Editor id=id mode=Mode::Edit /> }
+                                html! { <Editor id=id /> }
                             } else {
                                 html! { <Error context=Context::Danger(format!("Could not parse ID, {}", id)) /> }
                             }
