@@ -1,5 +1,6 @@
 #![recursion_limit = "1024"]
 mod components;
+mod prelude;
 mod types;
 
 #[macro_use]
@@ -7,7 +8,7 @@ extern crate validator_derive;
 
 use self::{
     components::{alert::Context, editor::Mode, Editor, Error, Home},
-    types::Recipe,
+    types::{Recipe, Rule, RuleType},
 };
 use log::info;
 use uuid::Uuid;

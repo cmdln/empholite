@@ -1,4 +1,4 @@
-use super::{Editor, Mode, Msg};
+use super::{rules::Rules, Editor, Mode, Msg};
 use crate::AppRoute;
 use bootstrap_rs::{
     input::InputType, Breadcrumb, BreadcrumbItem, ButtonGroup, CardBody, CardHeader, CardText,
@@ -113,6 +113,7 @@ impl Editor {
                     />
                     { render_validation_feedback("url", &self.errors) }
                 </FormGroup>
+                <Rules />
                 <FormGroup>
                     <label for="payload">
                         { "Payload" }

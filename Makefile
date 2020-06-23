@@ -5,14 +5,14 @@ clean:
 	cargo clean
 
 client/pkg/client_bg.wasm: client/main.js \
-	client/src/types/*.rs \
 	client/src/components/*.rs \
-	client/src/components/home/*.rs \
-	client/src/components/editor/*.rs \
 	client/src/components/alert/*.rs \
+	client/src/components/editor/*.rs \
+	client/src/components/editor/rules/*.rs \
+	client/src/components/home/*.rs \
+	client/src/types/*.rs \
 	client/src/lib.rs \
-	shared/src/*.rs \
-	shared/src/lib.rs
+	shared/src/*.rs
 	mkdir -p client/pkg
 	wasm-pack build --no-typescript --dev -t web client
 

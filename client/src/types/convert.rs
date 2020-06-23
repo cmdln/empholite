@@ -9,9 +9,11 @@ impl From<shared::Recipe> for Recipe {
             created_at,
             updated_at,
         } = r;
+        let rules = Vec::new();
         Self {
             id,
             url,
+            rules,
             payload,
             created_at,
             updated_at,

@@ -24,3 +24,4 @@ diesel = { version = "^1.4.4", features = [ "postgres", "r2d2", "uuidv07", "chro
 uuid = { version = "~0.8.0", features = [ "v4", "serde" ] }
 diesel-derive-enum = { version = "^1.0.0", features = [ "postgres" ] }
 chrono = { version = "~0.4.11", features = [ "serde" ] }
+medallion = "^2.4.0"

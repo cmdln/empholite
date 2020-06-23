@@ -1,4 +1,5 @@
 mod actions;
+mod rules;
 mod types;
 mod view;
 

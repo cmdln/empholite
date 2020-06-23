@@ -10,7 +10,7 @@ use actix_web::{
 use anyhow::bail;
 use diesel::prelude::*;
 use log::{debug, trace};
-use std::{collections::HashMap, sync::Mutex};
+use medallion::DefaultToken;
 use uuid::Uuid;
 
 #[actix_web::get("/ajax/recipe/")]
@@ -64,10 +64,21 @@ pub(crate) async fn upsert_recipe(
 }
 
 #[actix_web::get("/api{tail:.*}")]
-pub(crate) async fn serve_recipe(
-    request: HttpRequest,
-    data: Data<Mutex<HashMap<String, String>>>,
-) -> Result<HttpResponse> {
+pub(crate) async fn serve_recipe(request: HttpRequest, db: Data<DbPool>) -> Result<HttpResponse> {
+    use std::fs;
+    let auth = request.headers().get("Authorization");
+    if let Some(auth) = auth {
+        let auth = auth.to_str().map_err(ErrorInternalServerError)?;
+        let auth = auth.trim_start_matches("Bearer").trim();
+        let auth = auth.split('.').take(3).collect::<Vec<&str>>().join(".");
+        let token: DefaultToken<()> =
+            DefaultToken::parse(&auth).map_err(ErrorInternalServerError)?;
+        let key =
+            fs::read("/home/cmdln/.digital-auth-keys/qa/keys/public/digital-services-auth/sso/0")
+                .map_err(ErrorInternalServerError)?;
+        token.verify(&key).map_err(ErrorInternalServerError)?;
+        debug!("Auth token {:?}", token);
+    }
     let cx_info = request.connection_info();
     let scheme = cx_info.scheme();
     let host = cx_info.host();
@@ -84,10 +95,12 @@ pub(crate) async fn serve_recipe(
             .unwrap_or_else(|| "")
     );
     debug!("Recipe key {}", key);
-    let data = data.lock().unwrap();
-    trace!("Recipes {:?}", data);
-    if let Some(payload) = data.get(&key) {
-        Ok(HttpResponse::Ok().body(payload))
+    let to_find = key.clone();
+    let recipes = web::block(move || find_recipe_by_url(&db, to_find))
+        .await
+        .map_err(ErrorInternalServerError)?;
+    if recipes.len() == 1 {
+        Ok(HttpResponse::Ok().body(&recipes[0].payload))
     } else {
         Ok(HttpResponse::NotFound().body(format!(
             "Could not find a recipe for requested URI, {}",
@@ -112,6 +125,17 @@ fn find_recipe(db: &DbPool, to_find: Uuid) -> anyhow::Result<Recipe> {
     recipes
         .find(to_find)
         .first::<Recipe>(&conn)
+        .map_err(anyhow::Error::from)
+}
+
+fn find_recipe_by_url<S: AsRef<str>>(db: &DbPool, to_find: S) -> anyhow::Result<Vec<Recipe>> {
+    use crate::schema::recipes::dsl::*;
+
+    let conn = db.get()?;
+
+    recipes
+        .filter(url.eq(to_find.as_ref()))
+        .load::<Recipe>(&conn)
         .map_err(anyhow::Error::from)
 }
 
