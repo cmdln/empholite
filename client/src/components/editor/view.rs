@@ -1,5 +1,5 @@
-use super::{rules::Rules, Editor, Mode, Msg};
-use crate::AppRoute;
+use super::{rule_editor::RuleEditor, Editor, Mode, Msg};
+use crate::{AppRoute, Rule};
 use bootstrap_rs::{
     input::InputType, Breadcrumb, BreadcrumbItem, ButtonGroup, CardBody, CardHeader, CardText,
     FormGroup, Input, TextArea,
@@ -113,7 +113,27 @@ impl Editor {
                     />
                     { render_validation_feedback("url", &self.errors) }
                 </FormGroup>
-                <Rules />
+                <FormGroup>
+                    <p>{ "Rules" }</p>
+                    {
+                        if self.state.rules.is_empty() {
+                            html! {}
+                        } else {
+                            html! {
+                                <ol class="list-group mb-3">
+                                    { for self.state.rules.iter().enumerate().map(|(index, r)| self.render_rule(r, index)) }
+                                </ol>
+                            }
+                        }
+                    }
+                    <button
+                        type="button"
+                        class="btn btn-secondary"
+                        onclick=self.link.callback(|_| Msg::AddRule)
+                    >
+                        { "Add New Rule" }
+                    </button>
+                </FormGroup>
                 <FormGroup>
                     <label for="payload">
                         { "Payload" }
@@ -142,6 +162,16 @@ impl Editor {
                     </CardText>
                 </CardBody>
             </>
+        }
+    }
+
+    fn render_rule(&self, r: &Rule, index: usize) -> Html {
+        html! {
+            <RuleEditor
+                rule=r.to_owned()
+                on_change=self.link.callback(move |rule| Msg::RuleChanged(rule, index))
+                on_remove=self.link.callback(move |_| Msg::RemoveRule(index))
+            />
         }
     }
 }

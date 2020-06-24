@@ -1,12 +1,12 @@
 mod actions;
-mod rules;
+mod rule_editor;
 mod types;
 mod view;
 
 pub(crate) use self::types::Mode;
 use crate::{
     components::{alert::Context, Alert},
-    Recipe,
+    Recipe, Rule,
 };
 use bootstrap_rs::{prelude::*, Card, Container, Jumbotron};
 use uuid::Uuid;
@@ -38,6 +38,9 @@ pub(crate) enum Msg {
     Posted(String),
     Failure(String),
     ClearAlert,
+    AddRule,
+    RuleChanged(Rule, usize),
+    RemoveRule(usize),
 }
 
 #[derive(Properties, Debug, Clone)]
@@ -75,20 +78,24 @@ impl Component for Editor {
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
+        use Msg::*;
         let result = match msg {
-            Self::Message::Edit => self.handle_edit(),
-            Self::Message::Cancel => self.handle_cancel(),
-            Self::Message::Fetch => self.handle_fetch(),
-            Self::Message::Fetched(body) => self.handle_fetched(body),
-            Self::Message::Post => self.handle_post(),
-            Self::Message::Posted(body) => self.handle_posted(body),
-            Self::Message::UrlChanged(url) => self.handle_url_change(url),
-            Self::Message::PayloadChanged(payload) => self.handle_payload_change(payload),
-            Self::Message::Failure(error) => self.handle_failure(error),
-            Self::Message::ClearAlert => {
+            Edit => self.handle_edit(),
+            Cancel => self.handle_cancel(),
+            Fetch => self.handle_fetch(),
+            Fetched(body) => self.handle_fetched(body),
+            Post => self.handle_post(),
+            Posted(body) => self.handle_posted(body),
+            UrlChanged(url) => self.handle_url_change(url),
+            PayloadChanged(payload) => self.handle_payload_change(payload),
+            Failure(error) => self.handle_failure(error),
+            ClearAlert => {
                 self.alert_ctx = Context::None;
                 Ok(true)
             }
+            AddRule => self.handle_add_rule(),
+            RuleChanged(rule, index) => self.handle_rule_changed(rule, index),
+            RemoveRule(index) => self.handle_remove_rule(index),
         };
         match result {
             Ok(should_render) => should_render,

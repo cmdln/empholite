@@ -8,13 +8,13 @@ use std::collections::HashMap;
 use uuid::Uuid;
 use validator::{Validate, ValidationError};
 
-#[derive(PartialEq, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub(super) enum RuleType {
     Authenticated,
     Subject,
 }
 
-#[derive(Default, Debug, Serialize, Deserialize, Validate)]
+#[derive(Default, Debug, Serialize, Deserialize, Validate, Clone, PartialEq)]
 #[validate(schema(function = "validate_rule"))]
 pub(super) struct Rule {
     pub(super) rule_type: Option<RuleType>,

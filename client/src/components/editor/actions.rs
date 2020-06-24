@@ -1,5 +1,5 @@
 use super::{types::Mode, Editor, Msg};
-use crate::components::alert::Context;
+use crate::{components::alert::Context, Rule};
 use anyhow::{format_err, Context as _, Result};
 use log::{debug, error};
 use validator::Validate;
@@ -70,6 +70,21 @@ impl Editor {
 
     pub(super) fn handle_failure(&mut self, error: String) -> Result<ShouldRender> {
         self.alert_ctx = Context::Danger(error);
+        Ok(true)
+    }
+
+    pub(super) fn handle_add_rule(&mut self) -> Result<ShouldRender> {
+        self.state.rules.push(Rule::default());
+        Ok(true)
+    }
+
+    pub(super) fn handle_rule_changed(&mut self, rule: Rule, index: usize) -> Result<ShouldRender> {
+        self.state.rules[index] = rule;
+        Ok(true)
+    }
+
+    pub(super) fn handle_remove_rule(&mut self, index: usize) -> Result<ShouldRender> {
+        self.state.rules.remove(index);
         Ok(true)
     }
 
