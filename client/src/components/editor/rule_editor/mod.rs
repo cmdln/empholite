@@ -3,6 +3,7 @@ mod view;
 
 use crate::{prelude::*, Rule, RuleType};
 use bootstrap_rs::prelude::*;
+use validator::ValidationErrors;
 use yew::prelude::*;
 
 pub(super) struct RuleEditor {
@@ -16,6 +17,8 @@ pub(super) struct Props {
     pub(super) rule: Rule,
     pub(super) on_change: Callback<Rule>,
     pub(super) on_remove: Callback<()>,
+    #[prop_or_default]
+    pub(super) errors: Option<Option<Box<ValidationErrors>>>,
 }
 
 #[derive(Default, PartialEq, Clone)]
@@ -76,8 +79,8 @@ impl Component for RuleEditor {
 
         let result = match msg {
             TypeChange(ChangeData::Select(selected)) => self.handle_type(selected),
-            SubjectChange(subject) => render_on_assign(&mut self.state.subject, Some(subject)),
-            KeyPathChange(key_path) => render_on_assign(&mut self.state.key_path, Some(key_path)),
+            SubjectChange(subject) => opt_render_on_assign(&mut self.state.subject, subject),
+            KeyPathChange(key_path) => opt_render_on_assign(&mut self.state.key_path, key_path),
             TypeChange(_) => Ok(false),
             Remove => self.handle_remove(),
         };
@@ -99,7 +102,7 @@ impl Component for RuleEditor {
             false
         } else {
             render_on_assign(&mut self.state, state).unwrap_or_default()
-                && render_on_change(&mut self.props, props)
+                || render_on_change(&mut self.props, props)
         }
     }
 

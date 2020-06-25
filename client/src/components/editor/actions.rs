@@ -17,6 +17,7 @@ impl Editor {
 
     pub(super) fn handle_cancel(&mut self) -> Result<ShouldRender> {
         self.mode = Mode::View;
+        self.errors = None;
         self.link.send_message(Msg::Fetch);
         Ok(false)
     }

@@ -90,7 +90,7 @@ fn validate_rule(r: &Rule) -> Result<(), ValidationError> {
             rule_type: None, ..
         } => Err(ValidationError {
             code: "rule_type_required".into(),
-            message: Some("".into()),
+            message: Some("A rule type is required!".into()),
             params: HashMap::new(),
         }),
         _ => Ok(()),

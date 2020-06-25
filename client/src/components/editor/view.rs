@@ -4,7 +4,7 @@ use bootstrap_rs::{
     input::InputType, Breadcrumb, BreadcrumbItem, ButtonGroup, CardBody, CardHeader, CardText,
     FormGroup, Input, TextArea,
 };
-use validator::ValidationErrors;
+use validator::{ValidationErrors, ValidationErrorsKind};
 use yew::prelude::*;
 use yew_router::prelude::*;
 
@@ -166,11 +166,23 @@ impl Editor {
     }
 
     fn render_rule(&self, r: &Rule, index: usize) -> Html {
+        let errors = self
+            .errors
+            .as_ref()
+            .and_then(|errors| errors.errors().get("rules"))
+            .map(|errors| {
+                if let ValidationErrorsKind::List(errors) = errors {
+                    errors.get(&index).map(ToOwned::to_owned)
+                } else {
+                    None
+                }
+            });
         html! {
             <RuleEditor
                 rule=r.to_owned()
                 on_change=self.link.callback(move |rule| Msg::RuleChanged(rule, index))
                 on_remove=self.link.callback(move |_| Msg::RemoveRule(index))
+                errors=errors
             />
         }
     }
