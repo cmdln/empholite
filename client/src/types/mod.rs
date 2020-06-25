@@ -22,7 +22,7 @@ pub(super) struct Rule {
     pub(super) key_path: Option<String>,
 }
 
-#[derive(Default, Serialize, Deserialize, Debug, Validate)]
+#[derive(Default, Serialize, Deserialize, Debug, Validate, Clone)]
 pub(crate) struct Recipe {
     pub(crate) id: Option<Uuid>,
     #[validate(custom(

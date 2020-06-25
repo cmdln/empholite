@@ -1,5 +1,5 @@
 use crate::{
-    models::{NewRecipe, Recipe},
+    models::{NewRecipe, Recipe, RecipeCascaded, Rule},
     DbPool,
 };
 use actix_web::{
@@ -11,6 +11,7 @@ use anyhow::bail;
 use diesel::prelude::*;
 use log::{debug, trace};
 use medallion::DefaultToken;
+use std::convert::TryInto;
 use uuid::Uuid;
 
 #[actix_web::get("/ajax/recipe/")]
@@ -26,11 +27,13 @@ pub(crate) async fn list_recipes(db: Data<DbPool>) -> Result<HttpResponse> {
 
 #[actix_web::get("/ajax/recipe/{id}")]
 pub(crate) async fn get_recipe(path: Path<Uuid>, db: Data<DbPool>) -> Result<HttpResponse> {
-    let recipe: shared::Recipe = web::block(move || find_recipe(&db, path.into_inner()))
+    let (recipe, rules) = web::block(move || find_recipe(&db, path.into_inner()))
         .await
-        .map_err(ErrorInternalServerError)?
-        .into();
-    Ok(HttpResponse::Ok().json(recipe))
+        .map_err(ErrorInternalServerError)?;
+    let body: shared::Recipe = RecipeCascaded(recipe, rules)
+        .try_into()
+        .map_err(ErrorInternalServerError)?;
+    Ok(HttpResponse::Ok().json(body))
 }
 
 #[actix_web::post("/ajax/recipe/")]
@@ -41,7 +44,7 @@ pub(crate) async fn upsert_recipe(
     let shared::Recipe {
         id, url, payload, ..
     } = recipe.into_inner();
-    let upserted: shared::Recipe = if let Some(id) = id {
+    let (recipe, rules) = if let Some(id) = id {
         web::block(move || {
             let count = update_recipe(&db, id, url, payload)?;
             if count == 1 {
@@ -52,14 +55,18 @@ pub(crate) async fn upsert_recipe(
         })
         .await
         .map_err(ErrorInternalServerError)?
-        .into()
     } else {
         let to_created = NewRecipe { url, payload };
-        web::block(move || create_recipe(&db, to_created))
-            .await
-            .map_err(ErrorInternalServerError)?
-            .into()
+        (
+            web::block(move || create_recipe(&db, to_created))
+                .await
+                .map_err(ErrorInternalServerError)?,
+            Vec::new(),
+        )
     };
+    let upserted: shared::Recipe = RecipeCascaded(recipe, rules)
+        .try_into()
+        .map_err(ErrorInternalServerError)?;
     Ok(HttpResponse::Ok().json(upserted))
 }
 
@@ -117,15 +124,22 @@ fn load_recipes(db: &DbPool) -> anyhow::Result<Vec<Recipe>> {
     recipes.load::<Recipe>(&conn).map_err(anyhow::Error::from)
 }
 
-fn find_recipe(db: &DbPool, to_find: Uuid) -> anyhow::Result<Recipe> {
+fn find_recipe(db: &DbPool, to_find: Uuid) -> anyhow::Result<(Recipe, Vec<Rule>)> {
     use crate::schema::recipes::dsl::*;
 
     let conn = db.get()?;
 
-    recipes
+    let recipe = recipes
         .find(to_find)
         .first::<Recipe>(&conn)
-        .map_err(anyhow::Error::from)
+        .map_err(anyhow::Error::from)?;
+
+    let rules: Vec<(Rule, Recipe)> = Rule::belonging_to(&recipe)
+        .inner_join(recipes)
+        .load::<(Rule, Recipe)>(&conn)?;
+    let rules: Vec<Rule> = rules.into_iter().map(|(rule, _)| rule).collect();
+
+    Ok((recipe, rules))
 }
 
 fn find_recipe_by_url<S: AsRef<str>>(db: &DbPool, to_find: S) -> anyhow::Result<Vec<Recipe>> {

@@ -2,6 +2,7 @@ use super::{types::Mode, Editor, Msg};
 use crate::{components::alert::Context, Rule};
 use anyhow::{format_err, Context as _, Result};
 use log::{debug, error};
+use std::convert::TryInto;
 use validator::Validate;
 use yew::{
     format::{Nothing, Text},
@@ -95,10 +96,11 @@ impl Editor {
             self.errors = Some(errors);
             Ok(true)
         } else {
-            debug!("Recipe {:?}", self.state);
+            let body: shared::Recipe = self.state.clone().try_into()?;
+            debug!("Recipe {:?}", body);
             let request = Request::post("/ajax/recipe/")
                 .header("Content-Type", "application/json")
-                .body(serde_json::to_string(&self.state).map_err(anyhow::Error::from))
+                .body(serde_json::to_string(&body).map_err(anyhow::Error::from))
                 .map_err(anyhow::Error::from)?;
             let task = self.fetch_svc.fetch(
                 request,
