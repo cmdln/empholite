@@ -62,7 +62,7 @@ impl From<shared::Rule> for Rule {
                 ..Rule::default()
             },
             Subject(subject) => Rule {
-                rule_type: Some(RuleType::Authenticated),
+                rule_type: Some(RuleType::Subject),
                 subject: Some(subject),
                 ..Rule::default()
             },

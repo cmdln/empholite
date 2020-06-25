@@ -121,7 +121,7 @@ impl Editor {
                         } else {
                             html! {
                                 <ol class="list-group mb-3">
-                                    { for self.state.rules.iter().enumerate().map(|(index, r)| self.render_rule(r, index)) }
+                                    { for self.state.rules.iter().enumerate().map(|(index, r)| self.render_edit_rule(r, index)) }
                                 </ol>
                             }
                         }
@@ -140,10 +140,11 @@ impl Editor {
                     </label>
                     <TextArea
                         name="payload"
-                        value=self.state.payload.clone()
                         on_change=self.link.callback(|value| Msg::PayloadChanged(value))
                         valid=is_valid("payload", &self.errors)
-                    />
+                    >
+                        { self.state.payload.clone() }
+                    </TextArea>
                     { render_validation_feedback("payload", &self.errors) }
                 </FormGroup>
             </CardBody>
@@ -157,15 +158,22 @@ impl Editor {
                     { self.state.url.clone() }
                 </CardHeader>
                 <CardBody>
+                    <CardText>{ "Rules" }</CardText>
+                    <ol class="list-group mb-3">
+                        { for self.state.rules.iter().map(render_view_rule) }
+                    </ol>
                     <CardText>
-                        { self.state.payload.clone() }
+                        { "Payload" }
                     </CardText>
+                    <TextArea readonly=true>
+                        { self.state.payload.clone() }
+                    </TextArea>
                 </CardBody>
             </>
         }
     }
 
-    fn render_rule(&self, r: &Rule, index: usize) -> Html {
+    fn render_edit_rule(&self, r: &Rule, index: usize) -> Html {
         let errors = self
             .errors
             .as_ref()
@@ -185,6 +193,31 @@ impl Editor {
                 errors=errors
             />
         }
+    }
+}
+
+fn render_view_rule(r: &Rule) -> Html {
+    use crate::RuleType::*;
+    html! {
+        <li class="list-group-item">
+        {
+            match r.rule_type {
+                Some(Authenticated) => html! {
+                    <>
+                        { "Authenticated by verifying JWT with public key, " }
+                        { r.key_path.clone().unwrap_or_default() }
+                    </>
+                },
+                Some(Subject) => html! {
+                    <>
+                        { "Subject claim of authentication JWT matches value, " }
+                        { r.subject.clone().unwrap_or_default() }
+                    </>
+                },
+                _ => html! {}
+            }
+        }
+        </li>
     }
 }
 
