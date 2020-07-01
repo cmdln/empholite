@@ -14,6 +14,6 @@ pub struct Recipe {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum Rule {
-    Authenticated(String),
-    Subject(String),
+    Authenticated { id: Option<Uuid>, key_path: String },
+    Subject { id: Option<Uuid>, subject: String },
 }

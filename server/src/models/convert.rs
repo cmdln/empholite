@@ -1,6 +1,7 @@
-use super::{Recipe, RecipeCascaded, Rule, RuleType};
+use super::{NewRule, Recipe, RecipeCascaded, Rule, RuleType};
 use anyhow::{format_err, Error, Result};
-use std::convert::TryInto;
+use std::convert::{TryFrom, TryInto};
+use uuid::Uuid;
 
 impl Into<shared::Recipe> for Recipe {
     fn into(self) -> shared::Recipe {
@@ -66,15 +67,70 @@ impl TryInto<shared::Rule> for Rule {
             rule_type,
             key_path,
             subject,
+            id,
             ..
         } = self;
+        let id = Some(id);
         Ok(match rule_type {
-            Authenticated => shared::Rule::Authenticated(
-                key_path.ok_or_else(|| format_err!("Field, key_path, must be Some!"))?,
-            ),
-            Subject => shared::Rule::Subject(
-                subject.ok_or_else(|| format_err!("Field, subject, must be Some!"))?,
-            ),
+            Authenticated => shared::Rule::Authenticated {
+                id,
+                key_path: key_path.ok_or_else(|| format_err!("Field, key_path, must be Some!"))?,
+            },
+            Subject => shared::Rule::Subject {
+                id,
+                subject: subject.ok_or_else(|| format_err!("Field, subject, must be Some!"))?,
+            },
         })
+    }
+}
+
+impl TryFrom<(Uuid, shared::Rule)> for Rule {
+    type Error = Error;
+    fn try_from(t: (Uuid, shared::Rule)) -> Result<Self> {
+        use shared::Rule::*;
+        let (recipe_id, r) = t;
+        Ok(match r {
+            Authenticated { id, key_path } => {
+                let id = id.ok_or_else(|| format_err!("Rule must have an ID!"))?;
+                Self {
+                    id,
+                    recipe_id,
+                    rule_type: RuleType::Authenticated,
+                    subject: None,
+                    key_path: Some(key_path),
+                }
+            }
+            Subject { id, subject } => {
+                let id = id.ok_or_else(|| format_err!("Rule must have an ID!"))?;
+                Self {
+                    id,
+                    recipe_id,
+                    rule_type: RuleType::Subject,
+                    subject: Some(subject),
+                    key_path: None,
+                }
+            }
+        })
+    }
+}
+
+impl From<(Uuid, shared::Rule)> for NewRule {
+    fn from(t: (Uuid, shared::Rule)) -> Self {
+        let (recipe_id, r) = t;
+        use shared::Rule::*;
+        match r {
+            Authenticated { key_path, .. } => Self {
+                recipe_id,
+                rule_type: RuleType::Authenticated,
+                subject: None,
+                key_path: Some(key_path),
+            },
+            Subject { subject, .. } => Self {
+                recipe_id,
+                rule_type: RuleType::Subject,
+                subject: Some(subject),
+                key_path: None,
+            },
+        }
     }
 }

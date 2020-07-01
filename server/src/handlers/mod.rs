@@ -1,5 +1,5 @@
 use crate::{
-    models::{NewRecipe, Recipe, RecipeCascaded, Rule},
+    models::{NewRecipe, NewRule, Recipe, RecipeCascaded, Rule},
     DbPool,
 };
 use actix_web::{
@@ -42,12 +42,32 @@ pub(crate) async fn upsert_recipe(
     recipe: Json<shared::Recipe>,
 ) -> Result<HttpResponse> {
     let shared::Recipe {
-        id, url, payload, ..
+        id,
+        url,
+        payload,
+        rules,
+        ..
     } = recipe.into_inner();
     let (recipe, rules) = if let Some(id) = id {
+        use shared::Rule::*;
         web::block(move || {
             let count = update_recipe(&db, id, url, payload)?;
             if count == 1 {
+                let (to_retain, to_create): (Vec<shared::Rule>, Vec<shared::Rule>) =
+                    rules.into_iter().partition(|rule| match rule {
+                        Authenticated { id, .. } | Subject { id, .. } => id.is_some(),
+                    });
+                let to_retain = to_retain
+                    .into_iter()
+                    .map(|rule| (id, rule).try_into())
+                    .collect::<anyhow::Result<Vec<Rule>>>()?;
+                let to_create = to_create
+                    .into_iter()
+                    .map(|rule| (id, rule).into())
+                    .collect::<Vec<NewRule>>();
+                delete_rules(&db, id, &to_retain)?;
+                update_rules(&db, to_retain)?;
+                create_rules(&db, &to_create)?;
                 find_recipe(&db, id)
             } else {
                 bail!("Unable to update recipe, {}", id)
@@ -57,12 +77,17 @@ pub(crate) async fn upsert_recipe(
         .map_err(ErrorInternalServerError)?
     } else {
         let to_created = NewRecipe { url, payload };
-        (
-            web::block(move || create_recipe(&db, to_created))
-                .await
-                .map_err(ErrorInternalServerError)?,
-            Vec::new(),
-        )
+        web::block(move || {
+            create_recipe(&db, to_created).and_then(|recipe| {
+                let to_create: Vec<NewRule> = rules
+                    .into_iter()
+                    .map(|rule| (recipe.id, rule).into())
+                    .collect();
+                create_rules(&db, &to_create).map(|rules| (recipe, rules))
+            })
+        })
+        .await
+        .map_err(ErrorInternalServerError)?
     };
     let upserted: shared::Recipe = RecipeCascaded(recipe, rules)
         .try_into()
@@ -162,6 +187,47 @@ fn create_recipe(db: &DbPool, to_create: NewRecipe) -> anyhow::Result<Recipe> {
         .values(to_create)
         .get_result(&conn)
         .map_err(anyhow::Error::from)
+}
+
+fn create_rules(db: &DbPool, to_create: &[NewRule]) -> anyhow::Result<Vec<Rule>> {
+    use crate::schema::rules;
+
+    let conn = db.get()?;
+
+    diesel::insert_into(rules::table)
+        .values(to_create)
+        .get_results(&conn)
+        .map_err(anyhow::Error::from)
+}
+
+fn delete_rules(db: &DbPool, parent: Uuid, to_retain: &[Rule]) -> anyhow::Result<usize> {
+    use crate::schema::rules::dsl::*;
+
+    let conn = db.get()?;
+
+    let ids: Vec<Uuid> = to_retain.iter().map(|rule| rule.id).collect();
+
+    diesel::delete(rules.filter(recipe_id.eq(parent).and(id.ne_all(ids))))
+        .execute(&conn)
+        .map_err(anyhow::Error::from)
+}
+
+fn update_rules(db: &DbPool, to_update: Vec<Rule>) -> anyhow::Result<usize> {
+    use crate::schema::rules::dsl::*;
+
+    let conn = db.get()?;
+
+    let mut count = 0;
+    for rule in to_update {
+        count += diesel::update(rules.find(rule.id))
+            .set((
+                rule_type.eq(rule.rule_type),
+                subject.eq(rule.subject),
+                key_path.eq(rule.key_path),
+            ))
+            .execute(&conn)?;
+    }
+    Ok(count)
 }
 
 fn update_recipe(

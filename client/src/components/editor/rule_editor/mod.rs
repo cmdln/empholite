@@ -1,7 +1,7 @@
 mod actions;
 mod view;
 
-use crate::{prelude::*, Rule, RuleType};
+use crate::{prelude::*, Rule};
 use bootstrap_rs::prelude::*;
 use validator::ValidationErrors;
 use yew::prelude::*;
@@ -9,7 +9,7 @@ use yew::prelude::*;
 pub(super) struct RuleEditor {
     link: ComponentLink<Self>,
     props: Props,
-    state: State,
+    state: Rule,
 }
 
 #[derive(Properties, Debug, Clone, PartialEq)]
@@ -19,43 +19,6 @@ pub(super) struct Props {
     pub(super) on_remove: Callback<()>,
     #[prop_or_default]
     pub(super) errors: Option<Option<Box<ValidationErrors>>>,
-}
-
-#[derive(Default, PartialEq, Clone)]
-struct State {
-    rule_type: Option<RuleType>,
-    key_path: Option<String>,
-    subject: Option<String>,
-}
-
-impl From<Rule> for State {
-    fn from(r: Rule) -> Self {
-        let Rule {
-            rule_type,
-            key_path,
-            subject,
-        } = r;
-        Self {
-            rule_type,
-            key_path,
-            subject,
-        }
-    }
-}
-
-impl Into<Rule> for State {
-    fn into(self) -> Rule {
-        let State {
-            rule_type,
-            key_path,
-            subject,
-        } = self;
-        Rule {
-            rule_type,
-            key_path,
-            subject,
-        }
-    }
 }
 
 pub(super) enum Msg {
@@ -70,7 +33,7 @@ impl Component for RuleEditor {
     type Message = Msg;
 
     fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let state = props.rule.clone().into();
+        let state = props.rule.clone();
         Self { link, props, state }
     }
 
@@ -86,7 +49,7 @@ impl Component for RuleEditor {
         };
         match result {
             Ok(true) => {
-                self.props.on_change.emit(self.state.clone().into());
+                self.props.on_change.emit(self.state.clone());
                 true
             }
             Ok(false) => false,
@@ -96,7 +59,7 @@ impl Component for RuleEditor {
     }
 
     fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        let state = props.rule.clone().into();
+        let state = props.rule.clone();
 
         if self.props == props && self.state == state {
             false

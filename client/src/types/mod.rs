@@ -17,6 +17,7 @@ pub(super) enum RuleType {
 #[derive(Default, Debug, Serialize, Deserialize, Validate, Clone, PartialEq)]
 #[validate(schema(function = "validate_rule"))]
 pub(super) struct Rule {
+    pub(super) id: Option<Uuid>,
     pub(super) rule_type: Option<RuleType>,
     pub(super) subject: Option<String>,
     pub(super) key_path: Option<String>,

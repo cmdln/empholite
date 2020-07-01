@@ -93,6 +93,11 @@ impl Editor {
     pub(super) fn handle_post(&mut self) -> Result<ShouldRender> {
         if let Err(errors) = self.state.validate() {
             error!("Validation errors {:?}", errors);
+            self.link.send_message(Msg::Failure(
+                "There were problems with this recipe. Please fix the errors, below, and try saving
+                again."
+                    .into(),
+            ));
             self.errors = Some(errors);
             Ok(true)
         } else {

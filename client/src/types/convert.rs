@@ -56,12 +56,12 @@ impl From<shared::Rule> for Rule {
         use shared::Rule::*;
 
         match r {
-            Authenticated(key_path) => Rule {
+            Authenticated { key_path, .. } => Rule {
                 rule_type: Some(RuleType::Authenticated),
                 key_path: Some(key_path),
                 ..Rule::default()
             },
-            Subject(subject) => Rule {
+            Subject { subject, .. } => Rule {
                 rule_type: Some(RuleType::Subject),
                 subject: Some(subject),
                 ..Rule::default()
@@ -75,6 +75,7 @@ impl TryInto<shared::Rule> for Rule {
 
     fn try_into(self) -> Result<shared::Rule> {
         let Rule {
+            id,
             rule_type,
             key_path,
             subject,
@@ -82,12 +83,16 @@ impl TryInto<shared::Rule> for Rule {
         if let Some(rule_type) = rule_type {
             use RuleType::*;
             Ok(match rule_type {
-                Authenticated => shared::Rule::Authenticated(
-                    key_path.ok_or_else(|| format_err!("The field, key_path, must be Some!"))?,
-                ),
-                Subject => shared::Rule::Subject(
-                    subject.ok_or_else(|| format_err!("The field, subject, must be Some!"))?,
-                ),
+                Authenticated => shared::Rule::Authenticated {
+                    id,
+                    key_path: key_path
+                        .ok_or_else(|| format_err!("The field, key_path, must be Some!"))?,
+                },
+                Subject => shared::Rule::Subject {
+                    id,
+                    subject: subject
+                        .ok_or_else(|| format_err!("The field, subject, must be Some!"))?,
+                },
             })
         } else {
             Err(format_err!("The field, rule_type, must be Some!"))

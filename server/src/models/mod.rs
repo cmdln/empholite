@@ -40,3 +40,12 @@ pub(crate) struct Rule {
     pub(crate) key_path: Option<String>,
     pub(crate) subject: Option<String>,
 }
+
+#[derive(Insertable)]
+#[table_name = "rules"]
+pub(crate) struct NewRule {
+    pub(crate) recipe_id: Uuid,
+    pub(crate) rule_type: RuleType,
+    pub(crate) key_path: Option<String>,
+    pub(crate) subject: Option<String>,
+}

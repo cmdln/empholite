@@ -8,7 +8,5 @@ create table rules (
         subject varchar null
 );
 
-select diesel_manage_updated_at('rules');
-
 insert into rules (recipe_id, rule_type, key_path) select r.id, 'authenticated', '/foo' from recipes r where r.url  = 'http://test.local/api/foo';
 insert into rules (recipe_id, rule_type, subject) select r.id, 'subject', 'test' from recipes r where r.url  = 'http://test.local/api/foo';
