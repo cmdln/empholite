@@ -74,7 +74,11 @@ impl Component for Index {
 
 #[wasm_bindgen]
 pub fn run_app() -> std::result::Result<(), JsValue> {
-    wasm_logger::init(wasm_logger::Config::default());
+    #[cfg(debug_assertions)]
+    let config = wasm_logger::Config::new(log::Level::Debug);
+    #[cfg(not(debug_assertions))]
+    let config = wasm_logger::Config::new(log::Level::Info);
+    wasm_logger::init(config);
     yew::initialize();
     App::<Index>::new().mount_to_body();
     info!("Application initialized, mounted, and started");
