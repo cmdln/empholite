@@ -175,10 +175,10 @@ fn find_recipe_by_url<S: AsRef<str>>(
 
     let conn = db.get()?;
 
-    let joined: Vec<(Recipe, Rule)> = recipes::dsl::recipes
+    let joined: Vec<(Recipe, Option<Rule>)> = recipes::dsl::recipes
         .filter(recipes::dsl::url.eq(to_find.as_ref()))
-        .inner_join(rules::dsl::rules)
-        .load::<(Recipe, Rule)>(&conn)?;
+        .left_join(rules::dsl::rules)
+        .load::<(Recipe, Option<Rule>)>(&conn)?;
 
     // the query returns a denormalized Vec, meaning that while the rule have of each tuple is
     // distinct, the associated recipe may be repeated; unzip here to re-normalize before returning
@@ -190,7 +190,7 @@ fn find_recipe_by_url<S: AsRef<str>>(
 
     // this fold produces the result Vec who members are a tuple containing each recipe and its
     // associated rules
-    let (recipes, _) = recipes
+    let (mut recipes, _) = recipes
         .into_iter()
         // the accumulator is a tuple, the left half is the result Vec containing tuples of recipes
         // and their related rules, the right half is the leftover unprocessed rules, if any
@@ -200,9 +200,15 @@ fn find_recipe_by_url<S: AsRef<str>>(
             // partitioning on the ID means the left half of the resulting tuple is only rules with
             // this iterations recipe ID; the right half is the remaining rules which we pass along
             // in the accumulator
-            let (for_recipe, rules) = rules
-                .into_iter()
-                .partition(|rule| rule.recipe_id == recipe.id);
+            let (for_recipe, rules): (Vec<Option<_>>, Vec<Option<_>>) =
+                rules.into_iter().partition(|rule| {
+                    if let Some(rule) = rule {
+                        rule.recipe_id == recipe.id
+                    } else {
+                        false
+                    }
+                });
+            let for_recipe: Vec<Rule> = for_recipe.into_iter().filter_map(|rule| rule).collect();
 
             // push a new tuple for this iteration and the rules we matched to the recipe
             recipes.push((recipe, for_recipe));
@@ -210,6 +216,11 @@ fn find_recipe_by_url<S: AsRef<str>>(
             // return the accumulator to keep working
             (recipes, rules)
         });
+
+    // sort by the number of rules
+    recipes.sort_by_key(|(_, rules)| rules.len());
+    // descending so the most specific is evaluated first
+    recipes.reverse();
     Ok(recipes)
 }
 
