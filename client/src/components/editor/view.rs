@@ -17,6 +17,15 @@ impl Editor {
                     { "Recipe Management" }
                     </RouterAnchor<AppRoute>>
                 </BreadcrumbItem>
+                <BreadcrumbItem active=true>
+                {
+                    match (self.state.id.is_some(), &self.mode) {
+                        (true, Mode::View) => "View Recipe",
+                        (true, Mode::Edit) => "Edit Recipe",
+                        (false, _) => "Create New Recipe",
+                    }
+                }
+                </BreadcrumbItem>
             </Breadcrumb>
         }
     }
