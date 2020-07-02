@@ -10,7 +10,6 @@ use actix_web::{
 use anyhow::bail;
 use diesel::prelude::*;
 use log::{debug, trace};
-use medallion::DefaultToken;
 use std::convert::TryInto;
 use uuid::Uuid;
 
@@ -97,20 +96,6 @@ pub(crate) async fn upsert_recipe(
 
 #[actix_web::get("/api{tail:.*}")]
 pub(crate) async fn serve_recipe(request: HttpRequest, db: Data<DbPool>) -> Result<HttpResponse> {
-    use std::fs;
-    let auth = request.headers().get("Authorization");
-    if let Some(auth) = auth {
-        let auth = auth.to_str().map_err(ErrorInternalServerError)?;
-        let auth = auth.trim_start_matches("Bearer").trim();
-        let auth = auth.split('.').take(3).collect::<Vec<&str>>().join(".");
-        let token: DefaultToken<()> =
-            DefaultToken::parse(&auth).map_err(ErrorInternalServerError)?;
-        let key =
-            fs::read("/home/cmdln/.digital-auth-keys/qa/keys/public/digital-services-auth/sso/0")
-                .map_err(ErrorInternalServerError)?;
-        token.verify(&key).map_err(ErrorInternalServerError)?;
-        debug!("Auth token {:?}", token);
-    }
     let cx_info = request.connection_info();
     let scheme = cx_info.scheme();
     let host = cx_info.host();
@@ -131,8 +116,23 @@ pub(crate) async fn serve_recipe(request: HttpRequest, db: Data<DbPool>) -> Resu
     let recipes = web::block(move || find_recipe_by_url(&db, to_find))
         .await
         .map_err(ErrorInternalServerError)?;
-    if recipes.len() == 1 {
-        Ok(HttpResponse::Ok().body(&recipes[0].payload))
+    let recipes = recipes
+        .into_iter()
+        .map(|(recipe, rules)| recipe.evaluate_rules(&rules, &request))
+        // in order for collect to transpose Vec and Result we need the right hint, here, that
+        // matches the T and E generic arguments returned by the closure in the map in the line
+        // above
+        .collect::<anyhow::Result<Vec<Option<String>>>>()
+        .map_err(ErrorInternalServerError)?
+        // filter map after map_err and ? so that any short circuiting errors bubble out; the
+        // result of the remaining chain calls is a Vec of valid, matching recipes
+        .into_iter()
+        .filter_map(|payload| payload)
+        // due to the extended chaining, the compiler needs more help inferring the final type of
+        // the whole expression
+        .collect::<Vec<String>>();
+    if let Some(payload) = recipes.first() {
+        Ok(HttpResponse::Ok().body(payload))
     } else {
         Ok(HttpResponse::NotFound().body(format!(
             "Could not find a recipe for requested URI, {}",
@@ -167,15 +167,50 @@ fn find_recipe(db: &DbPool, to_find: Uuid) -> anyhow::Result<(Recipe, Vec<Rule>)
     Ok((recipe, rules))
 }
 
-fn find_recipe_by_url<S: AsRef<str>>(db: &DbPool, to_find: S) -> anyhow::Result<Vec<Recipe>> {
-    use crate::schema::recipes::dsl::*;
+fn find_recipe_by_url<S: AsRef<str>>(
+    db: &DbPool,
+    to_find: S,
+) -> anyhow::Result<Vec<(Recipe, Vec<Rule>)>> {
+    use crate::schema::{recipes, rules};
 
     let conn = db.get()?;
 
-    recipes
-        .filter(url.eq(to_find.as_ref()))
-        .load::<Recipe>(&conn)
-        .map_err(anyhow::Error::from)
+    let joined: Vec<(Recipe, Rule)> = recipes::dsl::recipes
+        .filter(recipes::dsl::url.eq(to_find.as_ref()))
+        .inner_join(rules::dsl::rules)
+        .load::<(Recipe, Rule)>(&conn)?;
+
+    // the query returns a denormalized Vec, meaning that while the rule have of each tuple is
+    // distinct, the associated recipe may be repeated; unzip here to re-normalize before returning
+    let (mut recipes, rules): (Vec<_>, Vec<_>) = joined.into_iter().unzip();
+
+    // sort followed by deduplicating yields a Vec of recipes that are unique by ID
+    recipes.sort_by_key(|recipe| recipe.id);
+    recipes.dedup_by_key(|recipe| recipe.id);
+
+    // this fold produces the result Vec who members are a tuple containing each recipe and its
+    // associated rules
+    let (recipes, _) = recipes
+        .into_iter()
+        // the accumulator is a tuple, the left half is the result Vec containing tuples of recipes
+        // and their related rules, the right half is the leftover unprocessed rules, if any
+        .fold((Vec::new(), rules), move |acc, recipe| {
+            let (mut recipes, rules) = acc;
+
+            // partitioning on the ID means the left half of the resulting tuple is only rules with
+            // this iterations recipe ID; the right half is the remaining rules which we pass along
+            // in the accumulator
+            let (for_recipe, rules) = rules
+                .into_iter()
+                .partition(|rule| rule.recipe_id == recipe.id);
+
+            // push a new tuple for this iteration and the rules we matched to the recipe
+            recipes.push((recipe, for_recipe));
+
+            // return the accumulator to keep working
+            (recipes, rules)
+        });
+    Ok(recipes)
 }
 
 fn create_recipe(db: &DbPool, to_create: NewRecipe) -> anyhow::Result<Recipe> {

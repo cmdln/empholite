@@ -1,4 +1,5 @@
 mod convert;
+mod eval;
 
 use crate::schema::{recipes, rules};
 use chrono::NaiveDateTime;
@@ -31,7 +32,7 @@ pub(crate) enum RuleType {
     Subject,
 }
 
-#[derive(Queryable, Identifiable, Associations)]
+#[derive(Queryable, Identifiable, Associations, Debug)]
 #[belongs_to(Recipe)]
 pub(crate) struct Rule {
     pub(crate) id: Uuid,
