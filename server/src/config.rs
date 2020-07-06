@@ -1,6 +1,6 @@
 use anyhow::{format_err, Context, Result};
 use lazy_static::lazy_static;
-use std::{env, path::PathBuf};
+use std::{env, path::PathBuf, str::FromStr};
 
 const CLIENT_PATH: &str = "client path";
 const STATIC_PATH: &str = "static path";
@@ -18,6 +18,8 @@ lazy_static! {
         default_path("./client/pkg/", &["client"])
     )
     .unwrap_or_else(|error| panic!("{}", error));
+    pub(crate) static ref KEY_PATH: PathBuf =
+        key_path().unwrap_or_else(|error| panic!("{}", error));
 }
 
 pub(crate) struct ServerConfig {
@@ -47,6 +49,34 @@ pub(crate) fn server_config() -> Result<ServerConfig> {
         client_bundle_path,
         static_file_path,
     })
+}
+
+fn key_path() -> Result<PathBuf> {
+    env::var("KEY_PATH")
+        .map_err(anyhow::Error::from)
+        .and_then(|key_path| {
+            PathBuf::from_str(&key_path)
+                .map_err(anyhow::Error::from)
+                .with_context(|| "Could not parse $KEY_PATH as a path!")
+        })
+        .or_else(|_| {
+            env::var("HOME")
+                .map_err(anyhow::Error::from)
+                .with_context(|| {
+                    "$HOME does not appear to be set, necessary when $KEY_PATH is not set!"
+                })
+                .and_then(|home| {
+                    PathBuf::from_str(&home)
+                        .map_err(anyhow::Error::from)
+                        .with_context(|| "Could not parse $HOME as a path!")
+                })
+                .map(|mut home| {
+                    home.push(".digital-auth-keys");
+                    home.push("qa");
+                    home.push("keys");
+                    home
+                })
+        })
 }
 
 fn env_or_default(option_name: &str, default: &str) -> String {

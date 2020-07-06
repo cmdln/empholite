@@ -1,8 +1,9 @@
 use super::{Recipe, Rule, RuleType};
 use actix_web::HttpRequest;
-use anyhow::{format_err, Result};
+use anyhow::{format_err, Context, Result};
 use log::debug;
 use medallion::{DefaultPayload, DefaultToken};
+use std::{path::PathBuf, str::FromStr};
 
 impl Recipe {
     pub(crate) fn evaluate_rules(
@@ -38,13 +39,17 @@ impl Rule {
     fn is_authenticated(&self, request: &HttpRequest) -> Result<bool> {
         if let Some(token) = extract_auth_token(request)? {
             debug!("Verifying token {:?}", token);
+            let mut key_path = crate::config::KEY_PATH.clone();
+            let db_key_path = self
+                .key_path
+                .as_ref()
+                .ok_or_else(|| format_err!("Key path was not set!"))?;
+            let db_key_path = PathBuf::from_str(db_key_path)
+                .with_context(|| format!("Could not parse {} as a path!", db_key_path))?;
+            key_path.push(db_key_path);
             use std::fs;
-            debug!("Loading key {:?}", self.key_path);
-            let key = fs::read(
-                self.key_path
-                    .as_ref()
-                    .ok_or_else(|| format_err!("Key path was not set!"))?,
-            )?;
+            debug!("Loading key {:?}", key_path.display());
+            let key = fs::read(key_path)?;
             debug!("Loaded key {:?}", self.key_path);
             token.verify(&key).map_err(anyhow::Error::from)
         } else {
