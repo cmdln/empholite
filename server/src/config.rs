@@ -2,8 +2,8 @@ use anyhow::{format_err, Context, Result};
 use lazy_static::lazy_static;
 use std::{env, path::PathBuf, str::FromStr};
 
-const CLIENT_PATH: &str = "client path";
-const STATIC_PATH: &str = "static path";
+const CLIENT_PATH: &str = "CLIENT_PATH";
+const STATIC_PATH: &str = "STATIC_PATH";
 
 lazy_static! {
     pub(crate) static ref FAVICON: String = file_from_env_or_default(

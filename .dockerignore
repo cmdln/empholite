@@ -1,0 +1,6 @@
+*
+!target/release/empholite
+!client/pkg/client_bg.wasm
+!client/pkg/client.js
+!client/pkg/bundle.js
+!static/
