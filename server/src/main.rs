@@ -60,6 +60,7 @@ async fn main() -> std::io::Result<()> {
             .service(handlers::upsert_recipe)
             .service(handlers::list_recipes)
             .service(handlers::serve_recipe)
+            .service(handlers::health_check)
             .service(Files::new("/client", &client_bundle_path))
             .service(Files::new("/add{tail:.*}", &static_file_path).index_file("index.html"))
             .service(Files::new("/view{tail:.*}", &static_file_path).index_file("index.html"))
