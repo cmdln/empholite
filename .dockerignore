@@ -4,3 +4,4 @@
 !client/pkg/client.js
 !client/pkg/bundle.js
 !static/
+!migrations/
