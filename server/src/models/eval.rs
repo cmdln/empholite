@@ -40,13 +40,15 @@ impl Rule {
         if let Some(token) = extract_auth_token(request)? {
             debug!("Verifying token {:?}", token);
             let mut key_path = crate::config::KEY_PATH.clone();
+            debug!("KEY PATH={}", key_path.display());
             let db_key_path = self
                 .key_path
                 .as_ref()
                 .ok_or_else(|| format_err!("Key path was not set!"))?;
-            let db_key_path = PathBuf::from_str(db_key_path)
+            let db_key_path = PathBuf::from_str(db_key_path.trim_start_matches('/'))
                 .with_context(|| format!("Could not parse {} as a path!", db_key_path))?;
             key_path.push(db_key_path);
+            debug!("After adding from DB, KEY PATH={}", key_path.display());
             use std::fs;
             debug!("Loading key {:?}", key_path.display());
             let key = fs::read(key_path)?;
