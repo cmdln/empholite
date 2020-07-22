@@ -6,15 +6,11 @@ use crate::{
 };
 use bootstrap_rs::{prelude::*, Card, CardBody, Container, Jumbotron};
 use shared::Recipe;
-use yew::{
-    prelude::*,
-    services::{fetch::FetchTask, FetchService},
-};
+use yew::{prelude::*, services::fetch::FetchTask};
 use yew_router::prelude::*;
 
 pub(crate) struct Home {
     link: ComponentLink<Self>,
-    fetch_svc: FetchService,
     fetch_tsk: Option<FetchTask>,
     state: Vec<Recipe>,
     alert_ctx: Context,
@@ -33,13 +29,11 @@ impl Component for Home {
 
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
         link.send_message(Self::Message::Fetch);
-        let fetch_svc = FetchService::new();
         let fetch_tsk = None;
         let state = Vec::new();
         let alert_ctx = Context::default();
         Self {
             link,
-            fetch_svc,
             fetch_tsk,
             state,
             alert_ctx,

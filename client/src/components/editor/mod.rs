@@ -11,14 +11,10 @@ use crate::{
 use bootstrap_rs::{prelude::*, Card, Container, Jumbotron};
 use uuid::Uuid;
 use validator::ValidationErrors;
-use yew::{
-    prelude::*,
-    services::{fetch::FetchTask, FetchService},
-};
+use yew::{prelude::*, services::fetch::FetchTask};
 
 pub(crate) struct Editor {
     link: ComponentLink<Self>,
-    fetch_svc: FetchService,
     fetch_tsk: Option<FetchTask>,
     props: Props,
     state: Recipe,
@@ -59,7 +55,6 @@ impl Component for Editor {
         if props.id.is_some() {
             link.send_message(Self::Message::Fetch);
         }
-        let fetch_svc = FetchService::new();
         let fetch_tsk = None;
         let state = Recipe::default();
         let alert_ctx = Context::default();
@@ -67,7 +62,6 @@ impl Component for Editor {
         let errors = None;
         Self {
             link,
-            fetch_svc,
             fetch_tsk,
             props,
             state,

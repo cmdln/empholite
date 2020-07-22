@@ -4,7 +4,10 @@ use log::{debug, error};
 use yew::{
     format::{Nothing, Text},
     prelude::*,
-    services::fetch::{Request, Response, StatusCode},
+    services::{
+        fetch::{Request, Response, StatusCode},
+        FetchService,
+    },
 };
 
 impl Home {
@@ -13,7 +16,7 @@ impl Home {
         let request = Request::get("/ajax/recipe/")
             .body(Nothing)
             .map_err(anyhow::Error::from)?;
-        let task = self.fetch_svc.fetch(
+        let task = FetchService::fetch(
             request,
             self.link.callback(
                 move |response: Response<Text>| match response.into_parts() {
