@@ -13,3 +13,6 @@
 
 # local service config
 .env
+
+# crypto public keys for testing
+publicKeys.json

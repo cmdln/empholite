@@ -1,9 +1,11 @@
 use super::{Recipe, Rule, RuleType};
+use crate::config::{self, KeyPathKind};
 use actix_web::HttpRequest;
 use anyhow::{format_err, Context, Result};
 use log::debug;
 use medallion::{DefaultPayload, DefaultToken};
-use std::{path::PathBuf, str::FromStr};
+use serde_json::Value;
+use std::{fs, path::PathBuf, str::FromStr};
 
 impl Recipe {
     pub(crate) fn evaluate_rules(
@@ -39,20 +41,35 @@ impl Rule {
     fn is_authenticated(&self, request: &HttpRequest) -> Result<bool> {
         if let Some(token) = extract_auth_token(request)? {
             debug!("Verifying token {:?}", token);
-            let mut key_path = crate::config::KEY_PATH.clone();
-            debug!("KEY PATH={}", key_path.display());
-            let db_key_path = self
-                .key_path
-                .as_ref()
-                .ok_or_else(|| format_err!("Key path was not set!"))?;
-            let db_key_path = PathBuf::from_str(db_key_path.trim_start_matches('/'))
-                .with_context(|| format!("Could not parse {} as a path!", db_key_path))?;
-            key_path.push(db_key_path);
-            debug!("After adding from DB, KEY PATH={}", key_path.display());
-            use std::fs;
-            debug!("Loading key {:?}", key_path.display());
-            let key = fs::read(key_path)?;
-            debug!("Loaded key {:?}", self.key_path);
+            let key = match config::KEY_PATH_KIND.clone() {
+                KeyPathKind::Directory(mut key_path) => {
+                    debug!("KEY PATH={}", key_path.display());
+                    let db_key_path = self
+                        .key_path
+                        .as_ref()
+                        .ok_or_else(|| format_err!("Key path was not set!"))?;
+                    let db_key_path = PathBuf::from_str(db_key_path.trim_start_matches('/'))
+                        .with_context(|| format!("Could not parse {} as a path!", db_key_path))?;
+                    key_path.push(db_key_path);
+                    debug!("After adding from DB, KEY PATH={}", key_path.display());
+                    debug!("Loading key {:?}", key_path.display());
+                    fs::read(key_path)?
+                }
+                KeyPathKind::File(key_path, key_ref) => {
+                    let key_data: Value = serde_json::from_reader(fs::File::open(key_path)?)?;
+                    let key = key_ref.iter().fold(Ok(&key_data), |key_data, key_ref| {
+                        key_data.and_then(|key_data| {
+                            key_data.get(key_ref).ok_or_else(|| {
+                                format_err!("Failed to find property, {}, in key data.", key_ref)
+                            })
+                        })
+                    })?;
+                    let key = key.as_str().ok_or_else(|| {
+                        format_err!("Key data in the JSON key file wasn't a string!")
+                    })?;
+                    base64::decode(key)?
+                }
+            };
             token.verify(&key).map_err(anyhow::Error::from)
         } else {
             Ok(false)

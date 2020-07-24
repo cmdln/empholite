@@ -1,6 +1,6 @@
 use anyhow::{format_err, Context, Result};
 use lazy_static::lazy_static;
-use std::{env, path::PathBuf, str::FromStr};
+use std::{convert::TryFrom, env, path::PathBuf, str::FromStr};
 
 const CLIENT_PATH: &str = "CLIENT_PATH";
 const STATIC_PATH: &str = "STATIC_PATH";
@@ -18,8 +18,29 @@ lazy_static! {
         default_path("./client/pkg/", &["client"])
     )
     .unwrap_or_else(|error| panic!("{}", error));
-    pub(crate) static ref KEY_PATH: PathBuf =
-        key_path().unwrap_or_else(|error| panic!("{}", error));
+    pub(crate) static ref KEY_PATH_KIND: KeyPathKind =
+        key_path_kind().unwrap_or_else(|error| panic!("{}", error));
+}
+
+#[derive(Debug, Clone)]
+pub(crate) enum KeyPathKind {
+    Directory(PathBuf),
+    File(PathBuf, Vec<String>),
+}
+
+impl TryFrom<String> for KeyPathKind {
+    type Error = anyhow::Error;
+
+    fn try_from(key_path_var: String) -> Result<KeyPathKind> {
+        match key_path_var.to_ascii_uppercase().as_str() {
+            "directory" | "dir" => Ok(KeyPathKind::Directory(key_path()?)),
+            "file" => Ok(KeyPathKind::File(key_path()?, key_ref()?)),
+            _ => Err(format_err!(
+                "{} cannot be parsed as a kind of key path!",
+                key_path_var
+            )),
+        }
+    }
 }
 
 pub(crate) struct ServerConfig {
@@ -77,6 +98,19 @@ fn key_path() -> Result<PathBuf> {
                     home
                 })
         })
+}
+
+fn key_ref() -> Result<Vec<String>> {
+    env::var("KEY_REF")
+        .map_err(anyhow::Error::from)
+        .map(|key_path| key_path.split('.').map(ToOwned::to_owned).collect())
+}
+
+fn key_path_kind() -> Result<KeyPathKind> {
+    env::var("KEY_PATH_KIND")
+        .map_err(anyhow::Error::from)
+        .and_then(TryFrom::try_from)
+        .or_else(|_| Ok(KeyPathKind::Directory(key_path()?)))
 }
 
 fn env_or_default(option_name: &str, default: &str) -> String {
