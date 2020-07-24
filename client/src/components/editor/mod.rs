@@ -18,6 +18,7 @@ pub(crate) struct Editor {
     fetch_tsk: Option<FetchTask>,
     props: Props,
     state: Recipe,
+    config: shared::Config,
     mode: Mode,
     alert_ctx: Context,
     errors: Option<ValidationErrors>,
@@ -28,6 +29,8 @@ pub(crate) enum Msg {
     Cancel,
     Fetch,
     Fetched(String),
+    FetchConfig,
+    FetchedConfig(String),
     UrlChanged(String),
     PayloadChanged(String),
     Post,
@@ -54,9 +57,12 @@ impl Component for Editor {
     fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
         if props.id.is_some() {
             link.send_message(Self::Message::Fetch);
+        } else {
+            link.send_message(Self::Message::FetchConfig);
         }
         let fetch_tsk = None;
         let state = Recipe::default();
+        let config = shared::Config::default();
         let alert_ctx = Context::default();
         let mode = props.mode.clone();
         let errors = None;
@@ -65,6 +71,7 @@ impl Component for Editor {
             fetch_tsk,
             props,
             state,
+            config,
             mode,
             alert_ctx,
             errors,
@@ -78,6 +85,8 @@ impl Component for Editor {
             Cancel => self.handle_cancel(),
             Fetch => self.handle_fetch(),
             Fetched(body) => self.handle_fetched(body),
+            FetchConfig => self.handle_fetch_config(),
+            FetchedConfig(body) => self.handle_fetched_config(body),
             Post => self.handle_post(),
             Posted(body) => self.handle_posted(body),
             UrlChanged(url) => self.handle_url_change(url),

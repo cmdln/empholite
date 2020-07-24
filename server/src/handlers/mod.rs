@@ -1,4 +1,5 @@
 use crate::{
+    config::{self, KeyPathKind},
     models::{NewRecipe, NewRule, Recipe, RecipeCascaded, Rule},
     DbPool,
 };
@@ -147,6 +148,20 @@ pub(crate) async fn health_check(db: Data<DbPool>) -> Result<HttpResponse> {
         .await
         .map_err(ErrorInternalServerError)?;
     Ok(HttpResponse::Ok().body("All is well!"))
+}
+
+#[actix_web::get("/ajax/config")]
+pub(crate) async fn get_config() -> Result<HttpResponse> {
+    debug!("KEY_PATH_KIND={:?}", std::env::var("KEY_PATH_KIND"));
+    debug!("KeyPathKind={:?}", *config::KEY_PATH_KIND);
+    let config = shared::Config {
+        key_path_kind: if let KeyPathKind::Directory(_) = *config::KEY_PATH_KIND {
+            shared::KeyPathKind::Directory
+        } else {
+            shared::KeyPathKind::File
+        },
+    };
+    Ok(HttpResponse::Ok().json(config))
 }
 
 fn load_recipes(db: &DbPool) -> anyhow::Result<Vec<Recipe>> {

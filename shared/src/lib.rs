@@ -17,3 +17,22 @@ pub enum Rule {
     Authenticated { id: Option<Uuid>, key_path: String },
     Subject { id: Option<Uuid>, subject: String },
 }
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+pub enum KeyPathKind {
+    Directory,
+    File,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Config {
+    pub key_path_kind: KeyPathKind,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            key_path_kind: KeyPathKind::Directory,
+        }
+    }
+}

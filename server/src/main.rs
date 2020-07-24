@@ -59,6 +59,7 @@ async fn main() -> std::io::Result<()> {
             .service(handlers::get_recipe)
             .service(handlers::upsert_recipe)
             .service(handlers::list_recipes)
+            .service(handlers::get_config)
             .service(handlers::serve_recipe)
             .service(handlers::health_check)
             .service(Files::new("/client", &client_bundle_path))

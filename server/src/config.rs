@@ -1,5 +1,6 @@
 use anyhow::{format_err, Context, Result};
 use lazy_static::lazy_static;
+use log::{debug, error};
 use std::{convert::TryFrom, env, path::PathBuf, str::FromStr};
 
 const CLIENT_PATH: &str = "CLIENT_PATH";
@@ -25,16 +26,24 @@ lazy_static! {
 #[derive(Debug, Clone)]
 pub(crate) enum KeyPathKind {
     Directory(PathBuf),
-    File(PathBuf, Vec<String>),
+    File(PathBuf),
 }
 
 impl TryFrom<String> for KeyPathKind {
     type Error = anyhow::Error;
 
     fn try_from(key_path_var: String) -> Result<KeyPathKind> {
-        match key_path_var.to_ascii_uppercase().as_str() {
+        let key_path_var = key_path_var.to_ascii_lowercase();
+        // this borrows the result of converting to lower case and cannot be chained directly off
+        // the preceding line because the lower case string then becomes a temporary value that
+        // doesn't live long enough; shadowing helps make sure we only match against the actual
+        // result of these steps
+        let key_path_var = key_path_var.as_str();
+        // converting to lower case and borrowing as the argument to match doesn't work as expected
+        // so instead we use a local that is the result of these operations
+        match key_path_var {
             "directory" | "dir" => Ok(KeyPathKind::Directory(key_path()?)),
-            "file" => Ok(KeyPathKind::File(key_path()?, key_ref()?)),
+            "file" => Ok(KeyPathKind::File(key_path()?)),
             _ => Err(format_err!(
                 "{} cannot be parsed as a kind of key path!",
                 key_path_var
@@ -100,17 +109,15 @@ fn key_path() -> Result<PathBuf> {
         })
 }
 
-fn key_ref() -> Result<Vec<String>> {
-    env::var("KEY_REF")
-        .map_err(anyhow::Error::from)
-        .map(|key_path| key_path.split('.').map(ToOwned::to_owned).collect())
-}
-
 fn key_path_kind() -> Result<KeyPathKind> {
     env::var("KEY_PATH_KIND")
         .map_err(anyhow::Error::from)
         .and_then(TryFrom::try_from)
-        .or_else(|_| Ok(KeyPathKind::Directory(key_path()?)))
+        .or_else(|error| {
+            error!("{}", error);
+            debug!("Using default KeyPathKind");
+            Ok(KeyPathKind::Directory(key_path()?))
+        })
 }
 
 fn env_or_default(option_name: &str, default: &str) -> String {

@@ -60,6 +60,38 @@ impl Editor {
             .with_context(|| "Error parsing JSON when trying to fetch a recipe!")?;
         self.state = state.into();
         self.fetch_tsk = None;
+        self.link.send_message(Msg::FetchConfig);
+        Ok(true)
+    }
+
+    pub(super) fn handle_fetch_config(&mut self) -> Result<ShouldRender> {
+        let request = Request::get("/ajax/config")
+            .body(Nothing)
+            .map_err(anyhow::Error::from)?;
+        let task = FetchService::fetch(
+            request,
+            self.link.callback(
+                move |response: Response<Text>| match response.into_parts() {
+                    (meta, Ok(body)) if meta.status >= StatusCode::BAD_REQUEST => {
+                        Msg::Failure(body)
+                    }
+                    (_, Ok(body)) => Msg::FetchedConfig(body),
+                    (_, Err(error)) => {
+                        error!("{}", error);
+                        Msg::Failure(format!("{}", error))
+                    }
+                },
+            ),
+        )?;
+        self.fetch_tsk = Some(task);
+        Ok(false)
+    }
+
+    pub(super) fn handle_fetched_config(&mut self, body: String) -> Result<ShouldRender> {
+        let config: shared::Config = serde_json::from_str(&body)
+            .with_context(|| "Error parsing JSON when trying to fetch config!")?;
+        self.fetch_tsk = None;
+        self.config = config;
         Ok(true)
     }
 

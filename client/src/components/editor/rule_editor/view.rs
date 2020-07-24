@@ -43,9 +43,19 @@ impl RuleEditor {
     }
 
     fn render_key_path(&self) -> Html {
+        let kind_help = if self.props.key_path_is_file {
+            "The value for the Key Reference is the property path to a specific key within a JSON file, for example \"my_service.0\"."
+        } else {
+            "The value for the Key Path is the path relative to a directory full of keys, for example \"/qa/my_service/public/sso/0\"."
+        };
+        let label_txt = if self.props.key_path_is_file {
+            "Key Reference"
+        } else {
+            "Key Path"
+        };
         html! {
             <div class="col">
-                <label for="subject">{ "Key Path" }</label>
+                <label for="subject">{ label_txt }</label>
                 <Input
                     name="key_path"
                     class=validation_class_for_rule(&self.props.errors, RuleType::Authenticated, &self.state.rule_type, "invalid_authenticated_rule", )
@@ -55,9 +65,8 @@ impl RuleEditor {
                     value=self.state.key_path.clone().unwrap_or_default()
                 />
                 <small id="key_path_help">
-                    { "This rule will match if the authentication JWT can be verified with the
-                    provided key. The value for the Key Path is the path relative to a directory
-                        full of keys, for example \"/qa/my_service/public/sso/0\"." }
+                    { format!("This rule will match if the authentication JWT can be verified with the
+                    provided key. {}", kind_help) }
                 </small>
                 { self.render_validation_feedback("invalid_authenticated_rule") }
             </div>
@@ -101,20 +110,6 @@ impl RuleEditor {
             }
             None => html! {},
         }
-    }
-
-    fn _validation_class(&self, code: &str, prefix: &str, valid: &str, invalid: &str) -> Classes {
-        let mut class = Classes::from(prefix);
-        match self.props.errors.as_ref() {
-            Some(Some(errors)) if invalid_for(errors, code) => {
-                class.push(invalid);
-            }
-            Some(Some(_)) | Some(None) => {
-                class.push(valid);
-            }
-            None => {}
-        }
-        class
     }
 }
 

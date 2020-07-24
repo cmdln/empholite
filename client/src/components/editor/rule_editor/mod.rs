@@ -15,6 +15,7 @@ pub(super) struct RuleEditor {
 #[derive(Properties, Debug, Clone, PartialEq)]
 pub(super) struct Props {
     pub(super) rule: Rule,
+    pub(super) key_path_is_file: bool,
     pub(super) on_change: Callback<Rule>,
     pub(super) on_remove: Callback<()>,
     #[prop_or_default]

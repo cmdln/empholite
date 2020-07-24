@@ -55,10 +55,20 @@ impl Rule {
                     debug!("Loading key {:?}", key_path.display());
                     fs::read(key_path)?
                 }
-                KeyPathKind::File(key_path, key_ref) => {
-                    let key_data: Value = serde_json::from_reader(fs::File::open(key_path)?)?;
+                KeyPathKind::File(key_path) => {
+                    let db_key_path = self
+                        .key_path
+                        .as_ref()
+                        .ok_or_else(|| format_err!("Key path was not set!"))?;
+                    debug!("Key reference from database, {}", db_key_path);
+                    let key_ref: Vec<String> =
+                        db_key_path.split('.').map(ToOwned::to_owned).collect();
+                    debug!("Split key ref {:?}", key_ref);
+                    debug!("Opening file, {}", key_path.display());
+                    let key_data: Value = serde_json::from_reader(fs::File::open(&key_path)?)?;
                     let key = key_ref.iter().fold(Ok(&key_data), |key_data, key_ref| {
                         key_data.and_then(|key_data| {
+                            debug!("Key data {:?}", key_data);
                             key_data.get(key_ref).ok_or_else(|| {
                                 format_err!("Failed to find property, {}, in key data.", key_ref)
                             })
@@ -67,7 +77,8 @@ impl Rule {
                     let key = key.as_str().ok_or_else(|| {
                         format_err!("Key data in the JSON key file wasn't a string!")
                     })?;
-                    base64::decode(key)?
+                    debug!("Found key, {}", key);
+                    key.as_bytes().to_owned()
                 }
             };
             token.verify(&key).map_err(anyhow::Error::from)
