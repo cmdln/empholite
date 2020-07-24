@@ -1,3 +1,5 @@
+docker_tag=0.2.4
+
 all: client/pkg/server_bg.wasm client/pkg/bundle.js
 
 clean:
@@ -25,4 +27,10 @@ client-watch:
 		sleep 1; \
 	done
 
-.PHONY: all clean client-watch
+docker:
+	wasm-pack build --no-typescript --release -t web client
+	rollup client/main.js --format iife --file client/pkg/bundle.js
+	cargo build -p empholite --release
+	docker build -t cmdln/empholite:latest -t cmdln/empholite:$(docker_tag) .
+
+.PHONY: all clean client-watch docker

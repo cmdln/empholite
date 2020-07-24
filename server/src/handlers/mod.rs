@@ -14,6 +14,8 @@ use log::{debug, trace};
 use std::convert::TryInto;
 use uuid::Uuid;
 
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 #[actix_web::get("/ajax/recipe/")]
 pub(crate) async fn list_recipes(db: Data<DbPool>) -> Result<HttpResponse> {
     let recipes: Vec<shared::Recipe> = web::block(move || load_recipes(&db))
@@ -147,7 +149,7 @@ pub(crate) async fn health_check(db: Data<DbPool>) -> Result<HttpResponse> {
     let _ = web::block(move || health_query(&db))
         .await
         .map_err(ErrorInternalServerError)?;
-    Ok(HttpResponse::Ok().body("All is well!"))
+    Ok(HttpResponse::Ok().body(format!("All is well! ({})", VERSION)))
 }
 
 #[actix_web::get("/ajax/config")]
