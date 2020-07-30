@@ -65,8 +65,8 @@ pub(crate) fn init() {
 }
 
 pub(crate) fn server_config() -> Result<ServerConfig> {
-    let host = env_or_default("host", "0.0.0.0");
-    let port: i32 = env_or_default("port", "8989").parse()?;
+    let host = env_or_default("HOST", "0.0.0.0");
+    let port: i32 = env_or_default("PORT", "8989").parse()?;
     let client_bundle_path =
         path_from_env_or_default(CLIENT_PATH, default_path("./client/pkg/", &["client"]))?;
     let static_file_path =
