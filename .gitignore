@@ -16,3 +16,6 @@
 
 # crypto public keys for testing
 publicKeys.json
+
+# data file for REST testing
+recipe.json
