@@ -13,6 +13,7 @@ impl From<shared::Recipe> for Recipe {
             rules,
         } = r;
         let rules = rules.into_iter().map(Into::into).collect();
+        let payload = payload.to_string();
         Self {
             id,
             url,
@@ -40,6 +41,7 @@ impl TryInto<shared::Recipe> for Recipe {
             .into_iter()
             .map(TryInto::try_into)
             .collect::<Result<Vec<shared::Rule>>>()?;
+        let payload: serde_json::Value = serde_json::from_str(&payload)?;
         Ok(shared::Recipe {
             id,
             url,

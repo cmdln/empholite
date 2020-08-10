@@ -1,10 +1,13 @@
 use super::{NewRule, Recipe, RecipeCascaded, Rule, RuleType};
 use anyhow::{format_err, Error, Result};
+use serde_json::Value;
 use std::convert::{TryFrom, TryInto};
 use uuid::Uuid;
 
-impl Into<shared::Recipe> for Recipe {
-    fn into(self) -> shared::Recipe {
+impl TryInto<shared::Recipe> for Recipe {
+    type Error = Error;
+
+    fn try_into(self) -> Result<shared::Recipe> {
         let Recipe {
             url,
             payload,
@@ -13,18 +16,17 @@ impl Into<shared::Recipe> for Recipe {
             updated_at,
         } = self;
         let id = Some(id);
+        let payload = serde_json::from_str(&payload)?;
         let created_at = Some(created_at);
         let updated_at = Some(updated_at);
-        // TODO convert rule elements
-        let rules = Vec::new();
-        shared::Recipe {
+        Ok(shared::Recipe {
             id,
             url,
-            rules,
             payload,
             created_at,
             updated_at,
-        }
+            ..shared::Recipe::default()
+        })
     }
 }
 
@@ -45,6 +47,7 @@ impl TryInto<shared::Recipe> for RecipeCascaded {
             .map(TryInto::try_into)
             .collect::<Result<Vec<shared::Rule>>>()?;
         let id = Some(id);
+        let payload: Value = serde_json::from_str(&payload)?;
         let created_at = Some(created_at);
         let updated_at = Some(updated_at);
         Ok(shared::Recipe {

@@ -20,8 +20,9 @@ pub(crate) async fn list_recipes(db: Data<DbPool>) -> Result<HttpResponse> {
         .await
         .map_err(ErrorInternalServerError)?
         .into_iter()
-        .map(Recipe::into)
-        .collect();
+        .map(Recipe::try_into)
+        .collect::<anyhow::Result<_>>()
+        .map_err(ErrorInternalServerError)?;
     Ok(HttpResponse::Ok().json(recipes))
 }
 
@@ -48,6 +49,7 @@ pub(crate) async fn upsert_recipe(
         rules,
         ..
     } = recipe.into_inner();
+    let payload = payload.to_string();
     let (recipe, rules) = if let Some(id) = id {
         use shared::Rule::*;
         web::block(move || {
