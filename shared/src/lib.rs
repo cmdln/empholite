@@ -28,6 +28,19 @@ pub enum Rule {
         id: Option<Uuid>,
         subject: String,
     },
+    HttpMethod {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        id: Option<Uuid>,
+        http_method: HttpVerb,
+    },
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum HttpVerb {
+    Get,
+    Post,
+    Put,
+    Delete,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]

@@ -11,7 +11,7 @@ mod schema;
 use actix_files::{Files, NamedFile};
 use actix_web::{
     middleware,
-    web::{get, Data},
+    web::{delete, get, post, put, Data},
     App, HttpServer, Result,
 };
 use chrono::Utc;
@@ -61,7 +61,10 @@ async fn main() -> std::io::Result<()> {
             .service(handlers::ajax::upsert_recipe)
             .service(handlers::ajax::list_recipes)
             .service(handlers::ajax::get_config)
-            .service(handlers::ajax::serve_recipe)
+            .route("/api{tail:.*}", get().to(handlers::serve_recipe))
+            .route("/api{tail:.*}", post().to(handlers::serve_recipe))
+            .route("/api{tail:.*}", put().to(handlers::serve_recipe))
+            .route("/api{tail:.*}", delete().to(handlers::serve_recipe))
             .service(handlers::health_check)
             .service(Files::new("/client", &client_bundle_path))
             .service(Files::new("/add{tail:.*}", &static_file_path).index_file("index.html"))

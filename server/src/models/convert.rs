@@ -1,4 +1,4 @@
-use super::{NewRule, Recipe, RecipeCascaded, Rule, RuleType};
+use super::{HttpVerb, NewRule, Recipe, RecipeCascaded, Rule, RuleType};
 use anyhow::{format_err, Error, Result};
 use serde_json::Value;
 use std::convert::{TryFrom, TryInto};
@@ -70,6 +70,7 @@ impl TryInto<shared::Rule> for Rule {
             rule_type,
             key_path,
             subject,
+            http_method,
             id,
             ..
         } = self;
@@ -82,6 +83,12 @@ impl TryInto<shared::Rule> for Rule {
             Subject => shared::Rule::Subject {
                 id,
                 subject: subject.ok_or_else(|| format_err!("Field, subject, must be Some!"))?,
+            },
+            HttpMethod => shared::Rule::HttpMethod {
+                id,
+                http_method: http_method
+                    .map(Into::into)
+                    .ok_or_else(|| format_err!("Field, http_method, must be Some!"))?,
             },
         })
     }
@@ -101,6 +108,7 @@ impl TryFrom<(Uuid, shared::Rule)> for Rule {
                     rule_type: RuleType::Authenticated,
                     subject: None,
                     key_path: Some(key_path),
+                    http_method: None,
                 }
             }
             Subject { id, subject } => {
@@ -111,6 +119,18 @@ impl TryFrom<(Uuid, shared::Rule)> for Rule {
                     rule_type: RuleType::Subject,
                     subject: Some(subject),
                     key_path: None,
+                    http_method: None,
+                }
+            }
+            HttpMethod { id, http_method } => {
+                let id = id.ok_or_else(|| format_err!("Rule must have an ID!"))?;
+                Self {
+                    id,
+                    recipe_id,
+                    rule_type: RuleType::HttpMethod,
+                    subject: None,
+                    key_path: None,
+                    http_method: Some(http_method.into()),
                 }
             }
         })
@@ -127,13 +147,46 @@ impl From<(Uuid, shared::Rule)> for NewRule {
                 rule_type: RuleType::Authenticated,
                 subject: None,
                 key_path: Some(key_path),
+                http_method: None,
             },
             Subject { subject, .. } => Self {
                 recipe_id,
                 rule_type: RuleType::Subject,
                 subject: Some(subject),
                 key_path: None,
+                http_method: None,
             },
+            HttpMethod { http_method, .. } => Self {
+                recipe_id,
+                rule_type: RuleType::HttpMethod,
+                subject: None,
+                key_path: None,
+                http_method: Some(http_method.into()),
+            },
+        }
+    }
+}
+
+impl From<shared::HttpVerb> for HttpVerb {
+    fn from(v: shared::HttpVerb) -> Self {
+        use shared::HttpVerb::*;
+        match v {
+            Get => HttpVerb::Get,
+            Post => HttpVerb::Post,
+            Put => HttpVerb::Put,
+            Delete => HttpVerb::Delete,
+        }
+    }
+}
+
+impl Into<shared::HttpVerb> for HttpVerb {
+    fn into(self) -> shared::HttpVerb {
+        use HttpVerb::*;
+        match self {
+            Get => shared::HttpVerb::Get,
+            Post => shared::HttpVerb::Post,
+            Put => shared::HttpVerb::Put,
+            Delete => shared::HttpVerb::Delete,
         }
     }
 }

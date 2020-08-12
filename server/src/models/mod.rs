@@ -30,6 +30,15 @@ pub(crate) struct NewRecipe {
 pub(crate) enum RuleType {
     Authenticated,
     Subject,
+    HttpMethod,
+}
+
+#[derive(DbEnum, Deserialize, Debug)]
+pub(crate) enum HttpVerb {
+    Get,
+    Post,
+    Put,
+    Delete,
 }
 
 #[derive(Queryable, Identifiable, Associations, Debug)]
@@ -40,6 +49,7 @@ pub(crate) struct Rule {
     pub(crate) rule_type: RuleType,
     pub(crate) key_path: Option<String>,
     pub(crate) subject: Option<String>,
+    pub(crate) http_method: Option<HttpVerb>,
 }
 
 #[derive(Insertable)]
@@ -49,4 +59,5 @@ pub(crate) struct NewRule {
     pub(crate) rule_type: RuleType,
     pub(crate) key_path: Option<String>,
     pub(crate) subject: Option<String>,
+    pub(crate) http_method: Option<HttpVerb>,
 }

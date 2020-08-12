@@ -10,7 +10,7 @@ table! {
 
 table! {
     use diesel::{sql_types::{Uuid, Nullable}, types::Varchar};
-    use crate::models::RuleTypeMapping;
+    use crate::models::{RuleTypeMapping, HttpVerbMapping};
 
     rules (id) {
         id -> Uuid,
@@ -18,6 +18,7 @@ table! {
         rule_type -> RuleTypeMapping,
         key_path -> Nullable<Varchar>,
         subject -> Nullable<Varchar>,
+        http_method -> Nullable<HttpVerbMapping>,
     }
 }
 

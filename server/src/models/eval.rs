@@ -32,9 +32,10 @@ impl Rule {
         debug!("Evaluating {:?}", self);
         use RuleType::*;
 
-        match self.rule_type {
+        match &self.rule_type {
             Authenticated => self.is_authenticated(request),
             Subject => self.is_authorized(request),
+            HttpVerb => self.is_method(request),
         }
     }
 
@@ -94,6 +95,10 @@ impl Rule {
         } else {
             Ok(false)
         }
+    }
+
+    fn is_method(&self, _request: &HttpRequest) -> Result<bool> {
+        todo!("Evaluate method rule")
     }
 }
 
