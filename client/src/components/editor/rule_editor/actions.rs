@@ -8,6 +8,7 @@ impl RuleEditor {
         self.state.rule_type = Some(match selected.selected_index() {
             1 => RuleType::Authenticated,
             2 => RuleType::Subject,
+            3 => RuleType::HttpMethod,
             _ => bail!("Invalid selection for rule type!"),
         });
         Ok(true)

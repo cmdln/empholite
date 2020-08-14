@@ -8,7 +8,7 @@ extern crate validator_derive;
 
 use self::{
     components::{alert::Context, editor::Mode, Editor, Error, Home},
-    types::{Recipe, Rule, RuleType},
+    types::{HttpVerb, Recipe, Rule, RuleType},
 };
 use log::info;
 use uuid::Uuid;

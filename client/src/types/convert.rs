@@ -1,4 +1,4 @@
-use super::{Recipe, Rule, RuleType};
+use super::{HttpVerb, Recipe, Rule, RuleType};
 use anyhow::{format_err, Error, Result};
 use std::convert::TryInto;
 
@@ -68,6 +68,35 @@ impl From<shared::Rule> for Rule {
                 subject: Some(subject),
                 ..Rule::default()
             },
+            HttpMethod { http_method, .. } => Rule {
+                rule_type: Some(RuleType::HttpMethod),
+                http_method: Some(http_method.into()),
+                ..Rule::default()
+            },
+        }
+    }
+}
+
+impl From<shared::HttpVerb> for HttpVerb {
+    fn from(s: shared::HttpVerb) -> Self {
+        use shared::HttpVerb::*;
+        match s {
+            Get => HttpVerb::Get,
+            Post => HttpVerb::Post,
+            Put => HttpVerb::Put,
+            Delete => HttpVerb::Delete,
+        }
+    }
+}
+
+impl Into<shared::HttpVerb> for HttpVerb {
+    fn into(self) -> shared::HttpVerb {
+        use HttpVerb::*;
+        match self {
+            Get => shared::HttpVerb::Get,
+            Post => shared::HttpVerb::Post,
+            Put => shared::HttpVerb::Put,
+            Delete => shared::HttpVerb::Delete,
         }
     }
 }
@@ -81,6 +110,7 @@ impl TryInto<shared::Rule> for Rule {
             rule_type,
             key_path,
             subject,
+            http_method,
         } = self;
         if let Some(rule_type) = rule_type {
             use RuleType::*;
@@ -94,6 +124,12 @@ impl TryInto<shared::Rule> for Rule {
                     id,
                     subject: subject
                         .ok_or_else(|| format_err!("The field, subject, must be Some!"))?,
+                },
+                HttpMethod => shared::Rule::HttpMethod {
+                    id,
+                    http_method: http_method
+                        .map(Into::into)
+                        .ok_or_else(|| format_err!("The field, http_method, must be Some!"))?,
                 },
             })
         } else {

@@ -1,7 +1,8 @@
 mod actions;
+mod verb_select;
 mod view;
 
-use crate::{prelude::*, Rule};
+use crate::{prelude::*, HttpVerb, Rule};
 use bootstrap_rs::prelude::*;
 use validator::ValidationErrors;
 use yew::prelude::*;
@@ -17,6 +18,7 @@ pub(super) struct Props {
     pub(super) rule: Rule,
     pub(super) key_path_is_file: bool,
     pub(super) on_change: Callback<Rule>,
+    pub(super) on_error: Callback<String>,
     pub(super) on_remove: Callback<()>,
     #[prop_or_default]
     pub(super) errors: Option<Option<Box<ValidationErrors>>>,
@@ -26,7 +28,9 @@ pub(super) enum Msg {
     TypeChange(ChangeData),
     KeyPathChange(String),
     SubjectChange(String),
+    HttpMethodChange(HttpVerb),
     Remove,
+    Failure(String),
 }
 
 impl Component for RuleEditor {
@@ -43,10 +47,21 @@ impl Component for RuleEditor {
 
         let result = match msg {
             TypeChange(ChangeData::Select(selected)) => self.handle_type(selected),
-            SubjectChange(subject) => opt_render_on_assign(&mut self.state.subject, subject),
-            KeyPathChange(key_path) => opt_render_on_assign(&mut self.state.key_path, key_path),
+            SubjectChange(subject) => {
+                opt_render_on_assign(&mut self.state.subject, InputString(subject))
+            }
+            KeyPathChange(key_path) => {
+                opt_render_on_assign(&mut self.state.key_path, InputString(key_path))
+            }
+            HttpMethodChange(http_verb) => {
+                opt_render_on_assign(&mut self.state.http_method, http_verb)
+            }
             TypeChange(_) => Ok(false),
             Remove => self.handle_remove(),
+            Failure(error) => {
+                self.props.on_error.emit(error);
+                Ok(true)
+            }
         };
         match result {
             Ok(true) => {

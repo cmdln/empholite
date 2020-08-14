@@ -35,7 +35,7 @@ impl Rule {
         match &self.rule_type {
             Authenticated => self.is_authenticated(request),
             Subject => self.is_authorized(request),
-            HttpVerb => self.is_method(request),
+            HttpMethod => self.is_method(request),
         }
     }
 

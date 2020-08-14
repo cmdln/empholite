@@ -1,4 +1,4 @@
-use super::{Msg, RuleEditor};
+use super::{verb_select::VerbSelect, Msg, RuleEditor};
 use crate::RuleType;
 use bootstrap_rs::{input::InputType, prelude::*, Button, ButtonToolbar, Input};
 use validator::ValidationErrors;
@@ -27,6 +27,7 @@ impl RuleEditor {
                             <option selected={self.state.rule_type.is_none()} disabled=true>{ "Choose Rule Type" }</option>
                             <option selected={self.state.rule_type == Some(RuleType::Authenticated)}>{ "Authenticated Call" }</option>
                             <option selected={self.state.rule_type == Some(RuleType::Subject)}>{ "With Subject" }</option>
+                            <option selected={self.state.rule_type == Some(RuleType::HttpMethod)}>{ "HTTP Method" }</option>
                         </select>
                         { self.render_validation_feedback("rule_type_required") }
                     </div>
@@ -34,6 +35,7 @@ impl RuleEditor {
                         match self.state.rule_type {
                             Some(RuleType::Authenticated) => self.render_key_path(),
                             Some(RuleType::Subject) => self.render_subject(),
+                            Some(RuleType::HttpMethod) => self.render_http_method(),
                             _ => html! { <div class="col" /> }
                         }
                     }
@@ -87,6 +89,20 @@ impl RuleEditor {
                 />
                 <small id="subject_help">{ "This rule will match the value of the subject claim in the authentication JWT." }</small>
                 { self.render_validation_feedback("invalid_subject_rule") }
+            </div>
+        }
+    }
+
+    fn render_http_method(&self) -> Html {
+        html! {
+            <div class="col">
+                <VerbSelect
+                    verb=self.state.http_method.clone()
+                    on_change=self.link.callback(Msg::HttpMethodChange)
+                    on_error=self.link.callback(Msg::Failure)
+                />
+                <small id="http_method_help">{ "This rule will match the method of the incoming HTTP request." }</small>
+                { self.render_validation_feedback("invalid_http_method_rule") }
             </div>
         }
     }

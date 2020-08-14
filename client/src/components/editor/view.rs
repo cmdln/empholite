@@ -199,6 +199,7 @@ impl Editor {
                 rule=r.to_owned()
                 key_path_is_file=shared::KeyPathKind::File == self.config.key_path_kind
                 on_change=self.link.callback(move |rule| Msg::RuleChanged(rule, index))
+                on_error=self.link.callback(Msg::Failure)
                 on_remove=self.link.callback(move |_| Msg::RemoveRule(index))
                 errors=errors
             />
@@ -222,6 +223,12 @@ fn render_view_rule(r: &Rule) -> Html {
                     <>
                         { "Subject claim of authentication JWT matches value, " }
                         { r.subject.clone().unwrap_or_default() }
+                    </>
+                },
+                Some(HttpMethod) => html! {
+                    <>
+                        { "HTTP method of incoming request matches verb, " }
+                        { r.http_method.clone().unwrap_or_default() }
                     </>
                 },
                 _ => html! {}

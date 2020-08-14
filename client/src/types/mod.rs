@@ -5,6 +5,7 @@ use http::Uri;
 use log::error;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fmt::{Display, Formatter, Result as FmtResult};
 use uuid::Uuid;
 use validator::{Validate, ValidationError};
 
@@ -12,6 +13,33 @@ use validator::{Validate, ValidationError};
 pub(super) enum RuleType {
     Authenticated,
     Subject,
+    HttpMethod,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub(super) enum HttpVerb {
+    Get,
+    Post,
+    Put,
+    Delete,
+}
+
+impl Default for HttpVerb {
+    fn default() -> Self {
+        Self::Get
+    }
+}
+
+impl Display for HttpVerb {
+    fn fmt(&self, f: &mut Formatter) -> FmtResult {
+        use HttpVerb::*;
+        match self {
+            Get => write!(f, "GET"),
+            Post => write!(f, "POST"),
+            Put => write!(f, "PUT"),
+            Delete => write!(f, "DELETE"),
+        }
+    }
 }
 
 #[derive(Default, Debug, Serialize, Deserialize, Validate, Clone, PartialEq)]
@@ -21,6 +49,7 @@ pub(super) struct Rule {
     pub(super) rule_type: Option<RuleType>,
     pub(super) subject: Option<String>,
     pub(super) key_path: Option<String>,
+    pub(super) http_method: Option<HttpVerb>,
 }
 
 #[derive(Default, Serialize, Deserialize, Debug, Validate, Clone)]
