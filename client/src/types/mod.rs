@@ -117,6 +117,18 @@ fn validate_rule(r: &Rule) -> Result<(), ValidationError> {
             params: HashMap::new(),
         }),
         Rule {
+            rule_type: Some(HttpMethod),
+            http_method: None,
+            ..
+        } => Err(ValidationError {
+            code: "invalid_http_method_rule".into(),
+            message: Some(
+                "The HTTP verb is required to check that a call used a specific HTTP method!"
+                    .into(),
+            ),
+            params: HashMap::new(),
+        }),
+        Rule {
             rule_type: None, ..
         } => Err(ValidationError {
             code: "rule_type_required".into(),

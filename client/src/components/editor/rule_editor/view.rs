@@ -98,6 +98,7 @@ impl RuleEditor {
             <div class="col">
                 <VerbSelect
                     verb=self.state.http_method.clone()
+                    class=validation_class_for_rule(&self.props.errors, RuleType::HttpMethod, &self.state.rule_type, "invalid_http_method_rule")
                     on_change=self.link.callback(Msg::HttpMethodChange)
                     on_error=self.link.callback(Msg::Failure)
                 />

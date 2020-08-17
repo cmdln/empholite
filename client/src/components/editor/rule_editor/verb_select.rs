@@ -1,7 +1,7 @@
 use crate::HttpVerb;
 use anyhow::{bail, Result};
 use bootstrap_rs::prelude::*;
-use yew::{prelude::*, web_sys::HtmlSelectElement};
+use yew::{prelude::*, web_sys::HtmlSelectElement, Classes};
 
 pub(crate) struct VerbSelect {
     props: Props,
@@ -19,6 +19,8 @@ pub(crate) struct Props {
     pub(crate) verb: Option<HttpVerb>,
     pub(crate) on_change: Callback<HttpVerb>,
     pub(crate) on_error: Callback<String>,
+    #[prop_or_default]
+    pub(crate) class: Classes,
 }
 
 impl Component for VerbSelect {
@@ -61,11 +63,13 @@ impl Component for VerbSelect {
 
     fn view(&self) -> Html {
         use HttpVerb::*;
+        let class = Classes::from("form-control");
+        let class = class.extend(self.props.class.clone());
         html! {
             <>
                 <label for="verb">{ "HTTP Verbs" }</label>
                 <select
-                    class="form-control"
+                    class=class
                     name="verb"
                     onchange=self.link.callback(move |evt| Msg::MethodChange(evt))
                 >
