@@ -8,6 +8,7 @@ pub struct Recipe {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<Uuid>,
     pub url: String,
+    #[serde(default = "Vec::new")]
     pub rules: Vec<Rule>,
     pub payload: Value,
     #[serde(skip_serializing_if = "Option::is_none")]

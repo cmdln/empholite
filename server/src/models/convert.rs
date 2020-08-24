@@ -1,5 +1,5 @@
 use super::{HttpVerb, NewRule, Recipe, RecipeCascaded, Rule, RuleType};
-use anyhow::{format_err, Error, Result};
+use anyhow::{bail, format_err, Error, Result};
 use serde_json::Value;
 use std::convert::{TryFrom, TryInto};
 use uuid::Uuid;
@@ -187,6 +187,38 @@ impl Into<shared::HttpVerb> for HttpVerb {
             Post => shared::HttpVerb::Post,
             Put => shared::HttpVerb::Put,
             Delete => shared::HttpVerb::Delete,
+        }
+    }
+}
+
+impl TryFrom<&str> for HttpVerb {
+    type Error = Error;
+
+    fn try_from(s: &str) -> Result<Self> {
+        use HttpVerb::*;
+        match s {
+            "Get" => Ok(Get),
+            "Post" => Ok(Post),
+            "Put" => Ok(Put),
+            "Delete" => Ok(Delete),
+            _ => bail!(
+                "{} is not a valid HTTP verb! For conversion from strings, case matters.",
+                s
+            ),
+        }
+    }
+}
+
+impl TryFrom<&str> for RuleType {
+    type Error = Error;
+
+    fn try_from(s: &str) -> Result<Self> {
+        use RuleType::*;
+        match s {
+            "Authenticated" => Ok(Authenticated),
+            "Subject" => Ok(Subject),
+            "HttpMethod" => Ok(HttpMethod),
+            _ => bail!("{} is not a valid rule type!", s),
         }
     }
 }
