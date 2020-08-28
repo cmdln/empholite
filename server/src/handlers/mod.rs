@@ -12,6 +12,8 @@ use diesel::prelude::*;
 use log::{debug, trace};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+const DEFAULT_OFFSET: i64 = 0;
+const DEFAULT_LIMIT: i64 = 25;
 
 pub(crate) async fn serve_recipe(request: HttpRequest, db: Data<DbPool>) -> Result<HttpResponse> {
     let cx_info = request.connection_info();

@@ -6,12 +6,20 @@ use anyhow::Result;
 use diesel::prelude::*;
 use uuid::Uuid;
 
-pub(super) fn load_recipes(db: &DbPool) -> Result<Vec<Recipe>> {
+pub(super) fn load_recipes(db: &DbPool, offset: i64, limit: i64) -> Result<(i64, Vec<Recipe>)> {
     use crate::schema::recipes::dsl::*;
 
     let conn = db.get()?;
 
-    recipes.load::<Recipe>(&conn).map_err(anyhow::Error::from)
+    let total = recipes.count().first::<i64>(&conn)?;
+
+    let results: Vec<Recipe> = recipes
+        .offset(offset)
+        .limit(limit)
+        .order((url, created_at))
+        .load::<Recipe>(&conn)?;
+
+    Ok((total, results))
 }
 
 pub(super) fn find_recipe(db: &DbPool, to_find: Uuid) -> Result<(Recipe, Vec<Rule>)> {

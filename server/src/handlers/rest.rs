@@ -10,7 +10,7 @@ use actix_web::{
     HttpResponse, Result,
 };
 use anyhow::{bail, format_err, Context};
-use serde_json::Value;
+use serde_json::{json, Value};
 use std::convert::TryInto;
 use uuid::Uuid;
 
@@ -80,14 +80,22 @@ pub(crate) async fn update_recipe(db_pool: Data<DbPool>, recipe: Bytes) -> Resul
 
 #[actix_web::get("/api/v1/recipe")]
 pub(crate) async fn list_recipes(db_pool: Data<DbPool>) -> Result<HttpResponse> {
-    let recipes: Vec<shared::Recipe> = web::block(move || db::load_recipes(&db_pool))
-        .await
-        .map_err(ErrorInternalServerError)?
+    let (total, recipes): (i64, Vec<Recipe>) =
+        web::block(move || db::load_recipes(&db_pool, super::DEFAULT_OFFSET, super::DEFAULT_LIMIT))
+            .await
+            .map_err(ErrorInternalServerError)?;
+    let recipes: Vec<shared::Recipe> = recipes
         .into_iter()
         .map(Recipe::try_into)
         .collect::<anyhow::Result<_>>()
         .map_err(ErrorInternalServerError)?;
-    Ok(HttpResponse::Ok().json(recipes))
+    let json = json! {{
+        "total": total,
+        "offset": super::DEFAULT_OFFSET,
+        "limit": super::DEFAULT_LIMIT,
+        "recipes": recipes,
+    }};
+    Ok(HttpResponse::Ok().json(json))
 }
 
 #[actix_web::get("/api/v1/recipe/{id}")]

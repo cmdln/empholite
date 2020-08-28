@@ -16,9 +16,11 @@ use uuid::Uuid;
 
 #[actix_web::get("/ajax/recipe/")]
 pub(crate) async fn list_recipes(db: Data<DbPool>) -> Result<HttpResponse> {
-    let recipes: Vec<shared::Recipe> = web::block(move || db::load_recipes(&db))
-        .await
-        .map_err(ErrorInternalServerError)?
+    let (_, recipes): (_, Vec<Recipe>) =
+        web::block(move || db::load_recipes(&db, super::DEFAULT_OFFSET, super::DEFAULT_LIMIT))
+            .await
+            .map_err(ErrorInternalServerError)?;
+    let recipes: Vec<shared::Recipe> = recipes
         .into_iter()
         .map(Recipe::try_into)
         .collect::<anyhow::Result<_>>()
