@@ -1,6 +1,6 @@
 use super::db;
 use crate::{
-    models::{HttpVerb, NewRecipe, NewRule, RecipeCascaded, RuleType},
+    models::{HttpVerb, NewRecipe, NewRule, Recipe, RecipeCascaded, RuleType},
     DbPool,
 };
 use actix_web::{
@@ -45,21 +45,79 @@ pub(crate) async fn create_recipe(db_pool: Data<DbPool>, recipe: Bytes) -> Resul
     Ok(HttpResponse::Ok().json(created))
 }
 
+#[actix_web::put("/api/recipe")]
+pub(crate) async fn update_recipe(db_pool: Data<DbPool>, recipe: Bytes) -> Result<HttpResponse> {
+    let recipe: Value = serde_json::from_slice(&recipe)
+        .with_context(|| "Could not parse the post body as JSON!")
+        .map_err(ErrorBadRequest)?;
+    let shared::Recipe {
+        url,
+        payload,
+        rules,
+        ..
+    } = validate_put(recipe).map_err(ErrorBadRequest)?;
+    let payload = serde_json::to_string(&payload).map_err(ErrorInternalServerError)?;
+    let (recipe, rules) = {
+        let to_create = NewRecipe { url, payload };
+        web::block(move || {
+            db::create_recipe(&db_pool, to_create).and_then(|recipe| {
+                let to_create: Vec<NewRule> = rules
+                    .into_iter()
+                    .map(|rule| (recipe.id, rule).into())
+                    .collect();
+                db::create_rules(&db_pool, &to_create).map(|rules| (recipe, rules))
+            })
+        })
+        .await
+        .map_err(ErrorInternalServerError)?
+    };
+    let created: shared::Recipe = RecipeCascaded(recipe, rules)
+        .try_into()
+        .map_err(ErrorInternalServerError)?;
+    Ok(HttpResponse::Ok().json(created))
+}
+
+#[actix_web::get("/api/recipe")]
+pub(crate) async fn list_recipes(db_pool: Data<DbPool>) -> Result<HttpResponse> {
+    let recipes: Vec<shared::Recipe> = web::block(move || db::load_recipes(&db_pool))
+        .await
+        .map_err(ErrorInternalServerError)?
+        .into_iter()
+        .map(Recipe::try_into)
+        .collect::<anyhow::Result<_>>()
+        .map_err(ErrorInternalServerError)?;
+    Ok(HttpResponse::Ok().json(recipes))
+}
+
 fn validate_post(post: Value) -> anyhow::Result<shared::Recipe> {
-    let endpoint = post
+    validate_change(post, "create")
+}
+
+fn validate_put(put: Value) -> anyhow::Result<shared::Recipe> {
+    put.get("id")
+        .ok_or_else(|| format_err!("You must include an ID with a new recipe!"))?;
+    validate_change(put, "update")
+}
+
+fn validate_change(value: Value, action: &str) -> anyhow::Result<shared::Recipe> {
+    let endpoint = value
         .get("url")
         .and_then(Value::as_str)
-        .ok_or_else(|| format_err!("You must specify a URL in order to create a new recipe!"))?;
+        .ok_or_else(|| format_err!("You must specify a URL in order to {} a recipe!", action))?;
     validate_url(endpoint)?;
-    if let Some(rules) = post.get("rules") {
+    if let Some(rules) = value.get("rules") {
         let rules = rules
             .as_array()
             .ok_or_else(|| format_err!("Rules property must be an array of JSON objects!"))?;
         validate_rules(&rules)?;
     }
-    post.get("payload")
-        .ok_or_else(|| format_err!("You must include a payload with a new recipe!"))?;
-    serde_json::from_value(post).map_err(anyhow::Error::from)
+    value.get("payload").ok_or_else(|| {
+        format_err!(
+            "You must include a payload in order to {} a recipe!",
+            action
+        )
+    })?;
+    serde_json::from_value(value).map_err(anyhow::Error::from)
 }
 
 fn validate_url(endpoint: &str) -> anyhow::Result<()> {
