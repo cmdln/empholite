@@ -4,6 +4,14 @@ use serde_json::Value;
 use uuid::Uuid;
 
 #[derive(Default, Serialize, Deserialize, Debug)]
+pub struct RecipesPage {
+    pub total: i64,
+    pub offset: i64,
+    pub limit: i64,
+    pub recipes: Vec<Recipe>,
+}
+
+#[derive(Default, Serialize, Deserialize, Debug)]
 pub struct Recipe {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<Uuid>,

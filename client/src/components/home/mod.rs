@@ -1,5 +1,7 @@
 mod actions;
+mod types;
 
+use self::types::RecipesPage;
 use crate::{
     components::{alert::Context, Alert},
     AppRoute,
@@ -12,7 +14,7 @@ use yew_router::prelude::*;
 pub(crate) struct Home {
     link: ComponentLink<Self>,
     fetch_tsk: Option<FetchTask>,
-    state: Vec<Recipe>,
+    state: RecipesPage,
     alert_ctx: Context,
 }
 
@@ -30,7 +32,7 @@ impl Component for Home {
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
         link.send_message(Self::Message::Fetch);
         let fetch_tsk = None;
-        let state = Vec::new();
+        let state = RecipesPage::default();
         let alert_ctx = Context::default();
         Self {
             link,
@@ -67,6 +69,7 @@ impl Component for Home {
     }
 
     fn view(&self) -> Html {
+        let recipes = &self.state.recipes;
         html! {
             <Container>
                 <Jumbotron margin=Margin(Edge::Bottom, 3)>
@@ -77,7 +80,7 @@ impl Component for Home {
                 <Card border=Border(Edge::All, Color::Primary)>
                     <CardBody>
                         <ul class="list-group">
-                            { for self.state.iter().map(view_recipe) }
+                            { for recipes.iter().map(view_recipe) }
                         </ul>
                     </CardBody>
                 </Card>
