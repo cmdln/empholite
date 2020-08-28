@@ -2,7 +2,7 @@ pub(crate) mod ajax;
 mod db;
 pub(crate) mod rest;
 
-use crate::DbPool;
+use crate::{models::Recipe, DbPool};
 use actix_web::{
     error::ErrorInternalServerError,
     web::{self, Data},
@@ -10,6 +10,8 @@ use actix_web::{
 };
 use diesel::prelude::*;
 use log::{debug, trace};
+use serde_json::{json, Value};
+use std::convert::TryInto;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const DEFAULT_OFFSET: i64 = 0;
@@ -74,4 +76,22 @@ fn health_query(db: &DbPool) -> anyhow::Result<usize> {
     diesel::sql_query("select 1 = 1")
         .execute(&conn)
         .map_err(anyhow::Error::from)
+}
+
+fn list_recipes_offset_limit(
+    db_pool: Data<DbPool>,
+    offset: i64,
+    limit: i64,
+) -> anyhow::Result<Value> {
+    let (total, recipes): (i64, Vec<Recipe>) = db::load_recipes(&db_pool, offset, limit)?;
+    let recipes: Vec<shared::Recipe> = recipes
+        .into_iter()
+        .map(Recipe::try_into)
+        .collect::<anyhow::Result<_>>()?;
+    Ok(json! {{
+        "total": total,
+        "offset": offset,
+        "limit": limit,
+        "recipes": recipes,
+    }})
 }

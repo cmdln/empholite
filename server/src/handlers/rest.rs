@@ -1,6 +1,6 @@
 use super::db;
 use crate::{
-    models::{HttpVerb, NewRecipe, NewRule, Recipe, RecipeCascaded, RuleType},
+    models::{HttpVerb, NewRecipe, NewRule, RecipeCascaded, RuleType},
     DbPool,
 };
 use actix_web::{
@@ -10,9 +10,43 @@ use actix_web::{
     HttpResponse, Result,
 };
 use anyhow::{bail, format_err, Context};
-use serde_json::{json, Value};
+use serde_json::Value;
 use std::convert::TryInto;
 use uuid::Uuid;
+
+#[actix_web::get("/api/v1/recipe")]
+pub(crate) async fn list_recipes(db_pool: Data<DbPool>) -> Result<HttpResponse> {
+    let json = web::block(move || {
+        super::list_recipes_offset_limit(db_pool, super::DEFAULT_OFFSET, super::DEFAULT_LIMIT)
+    })
+    .await
+    .map_err(ErrorInternalServerError)?;
+    Ok(HttpResponse::Ok().json(json))
+}
+
+#[actix_web::get("/api/v1/recipe/offset/{offset}")]
+pub(crate) async fn list_recipes_page(
+    db_pool: Data<DbPool>,
+    offset: Path<i64>,
+) -> Result<HttpResponse> {
+    let json = web::block(move || {
+        super::list_recipes_offset_limit(db_pool, offset.into_inner(), super::DEFAULT_LIMIT)
+    })
+    .await
+    .map_err(ErrorInternalServerError)?;
+    Ok(HttpResponse::Ok().json(json))
+}
+
+#[actix_web::get("/api/v1/recipe/{id}")]
+pub(crate) async fn get_recipe(path: Path<Uuid>, db: Data<DbPool>) -> Result<HttpResponse> {
+    let (recipe, rules) = web::block(move || db::find_recipe(&db, path.into_inner()))
+        .await
+        .map_err(ErrorInternalServerError)?;
+    let body: shared::Recipe = RecipeCascaded(recipe, rules)
+        .try_into()
+        .map_err(ErrorInternalServerError)?;
+    Ok(HttpResponse::Ok().json(body))
+}
 
 #[actix_web::post("/api/v1/recipe")]
 pub(crate) async fn create_recipe(db_pool: Data<DbPool>, recipe: Bytes) -> Result<HttpResponse> {
@@ -76,37 +110,6 @@ pub(crate) async fn update_recipe(db_pool: Data<DbPool>, recipe: Bytes) -> Resul
         .try_into()
         .map_err(ErrorInternalServerError)?;
     Ok(HttpResponse::Ok().json(created))
-}
-
-#[actix_web::get("/api/v1/recipe")]
-pub(crate) async fn list_recipes(db_pool: Data<DbPool>) -> Result<HttpResponse> {
-    let (total, recipes): (i64, Vec<Recipe>) =
-        web::block(move || db::load_recipes(&db_pool, super::DEFAULT_OFFSET, super::DEFAULT_LIMIT))
-            .await
-            .map_err(ErrorInternalServerError)?;
-    let recipes: Vec<shared::Recipe> = recipes
-        .into_iter()
-        .map(Recipe::try_into)
-        .collect::<anyhow::Result<_>>()
-        .map_err(ErrorInternalServerError)?;
-    let json = json! {{
-        "total": total,
-        "offset": super::DEFAULT_OFFSET,
-        "limit": super::DEFAULT_LIMIT,
-        "recipes": recipes,
-    }};
-    Ok(HttpResponse::Ok().json(json))
-}
-
-#[actix_web::get("/api/v1/recipe/{id}")]
-pub(crate) async fn get_recipe(path: Path<Uuid>, db: Data<DbPool>) -> Result<HttpResponse> {
-    let (recipe, rules) = web::block(move || db::find_recipe(&db, path.into_inner()))
-        .await
-        .map_err(ErrorInternalServerError)?;
-    let body: shared::Recipe = RecipeCascaded(recipe, rules)
-        .try_into()
-        .map_err(ErrorInternalServerError)?;
-    Ok(HttpResponse::Ok().json(body))
 }
 
 #[actix_web::delete("/api/v1/recipe/{id}")]
