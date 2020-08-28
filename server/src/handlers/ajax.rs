@@ -99,6 +99,14 @@ pub(crate) async fn upsert_recipe(
     Ok(HttpResponse::Ok().json(upserted))
 }
 
+#[actix_web::delete("/ajax/recipe/{id}")]
+pub(crate) async fn delete_recipe(db_pool: Data<DbPool>, path: Path<Uuid>) -> Result<HttpResponse> {
+    web::block(move || db::delete_recipe(&db_pool, path.into_inner()))
+        .await
+        .map_err(ErrorInternalServerError)?;
+    Ok(HttpResponse::Ok().finish())
+}
+
 #[actix_web::get("/ajax/config")]
 pub(crate) async fn get_config() -> Result<HttpResponse> {
     debug!("KEY_PATH_KIND={:?}", std::env::var("KEY_PATH_KIND"));

@@ -6,14 +6,15 @@ use crate::{
 use actix_web::{
     error::{ErrorBadRequest, ErrorInternalServerError},
     http::Uri,
-    web::{self, Bytes, Data},
+    web::{self, Bytes, Data, Path},
     HttpResponse, Result,
 };
 use anyhow::{bail, format_err, Context};
 use serde_json::Value;
 use std::convert::TryInto;
+use uuid::Uuid;
 
-#[actix_web::post("/api/recipe")]
+#[actix_web::post("/api/v1/recipe")]
 pub(crate) async fn create_recipe(db_pool: Data<DbPool>, recipe: Bytes) -> Result<HttpResponse> {
     let recipe: Value = serde_json::from_slice(&recipe)
         .with_context(|| "Could not parse the post body as JSON!")
@@ -45,7 +46,7 @@ pub(crate) async fn create_recipe(db_pool: Data<DbPool>, recipe: Bytes) -> Resul
     Ok(HttpResponse::Ok().json(created))
 }
 
-#[actix_web::put("/api/recipe")]
+#[actix_web::put("/api/v1/recipe")]
 pub(crate) async fn update_recipe(db_pool: Data<DbPool>, recipe: Bytes) -> Result<HttpResponse> {
     let recipe: Value = serde_json::from_slice(&recipe)
         .with_context(|| "Could not parse the post body as JSON!")
@@ -77,7 +78,7 @@ pub(crate) async fn update_recipe(db_pool: Data<DbPool>, recipe: Bytes) -> Resul
     Ok(HttpResponse::Ok().json(created))
 }
 
-#[actix_web::get("/api/recipe")]
+#[actix_web::get("/api/v1/recipe")]
 pub(crate) async fn list_recipes(db_pool: Data<DbPool>) -> Result<HttpResponse> {
     let recipes: Vec<shared::Recipe> = web::block(move || db::load_recipes(&db_pool))
         .await
@@ -87,6 +88,25 @@ pub(crate) async fn list_recipes(db_pool: Data<DbPool>) -> Result<HttpResponse> 
         .collect::<anyhow::Result<_>>()
         .map_err(ErrorInternalServerError)?;
     Ok(HttpResponse::Ok().json(recipes))
+}
+
+#[actix_web::get("/api/v1/recipe/{id}")]
+pub(crate) async fn get_recipe(path: Path<Uuid>, db: Data<DbPool>) -> Result<HttpResponse> {
+    let (recipe, rules) = web::block(move || db::find_recipe(&db, path.into_inner()))
+        .await
+        .map_err(ErrorInternalServerError)?;
+    let body: shared::Recipe = RecipeCascaded(recipe, rules)
+        .try_into()
+        .map_err(ErrorInternalServerError)?;
+    Ok(HttpResponse::Ok().json(body))
+}
+
+#[actix_web::delete("/api/v1/recipe/{id}")]
+pub(crate) async fn delete_recipe(db_pool: Data<DbPool>, path: Path<Uuid>) -> Result<HttpResponse> {
+    web::block(move || db::delete_recipe(&db_pool, path.into_inner()))
+        .await
+        .map_err(ErrorInternalServerError)?;
+    Ok(HttpResponse::Ok().finish())
 }
 
 fn validate_post(post: Value) -> anyhow::Result<shared::Recipe> {

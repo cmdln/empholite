@@ -111,6 +111,18 @@ pub(super) fn create_rules(db: &DbPool, to_create: &[NewRule]) -> Result<Vec<Rul
         .map_err(anyhow::Error::from)
 }
 
+pub(super) fn delete_recipe(db: &DbPool, to_delete: Uuid) -> Result<usize> {
+    use crate::schema::recipes::dsl::*;
+
+    delete_rules(db, to_delete, &Vec::new())?;
+
+    let conn = db.get()?;
+
+    diesel::delete(recipes.filter(id.eq(to_delete)))
+        .execute(&conn)
+        .map_err(anyhow::Error::from)
+}
+
 pub(super) fn delete_rules(db: &DbPool, parent: Uuid, to_retain: &[Rule]) -> Result<usize> {
     use crate::schema::rules::dsl::*;
 
