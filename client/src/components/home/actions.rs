@@ -1,6 +1,7 @@
 use super::{Home, Msg};
 use anyhow::Result;
 use log::{debug, error};
+use uuid::Uuid;
 use yew::{
     format::{Nothing, Text},
     prelude::*,
@@ -44,6 +45,35 @@ impl Home {
     pub(super) fn handle_fetched(&mut self, body: String) -> Result<ShouldRender> {
         self.state = serde_json::from_str(&body)?;
         self.fetch_tsk = None;
+        Ok(true)
+    }
+
+    pub(super) fn handle_delete(&mut self, id: Uuid) -> Result<ShouldRender> {
+        let request = Request::delete(format!("/ajax/recipe/{}", id))
+            .body(Nothing)
+            .map_err(anyhow::Error::from)?;
+        let task = FetchService::fetch(
+            request,
+            self.link.callback(
+                move |response: Response<Text>| match response.into_parts() {
+                    (meta, Ok(body)) if meta.status >= StatusCode::BAD_REQUEST => {
+                        Msg::Failure(body)
+                    }
+                    (_, Ok(_)) => Msg::Deleted,
+                    (_, Err(error)) => {
+                        error!("{}", error);
+                        Msg::Failure(format!("{}", error))
+                    }
+                },
+            ),
+        )?;
+        self.fetch_tsk = Some(task);
+        Ok(false)
+    }
+
+    pub(super) fn handle_deleted(&mut self) -> Result<ShouldRender> {
+        self.fetch_tsk = None;
+        self.link.send_message(Msg::Fetch);
         Ok(true)
     }
 }

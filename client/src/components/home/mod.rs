@@ -6,8 +6,9 @@ use crate::{
     components::{alert::Context, Alert},
     AppRoute,
 };
-use bootstrap_rs::{prelude::*, Card, CardBody, Container, Jumbotron};
+use bootstrap_rs::{prelude::*, Button, Card, CardBody, Container, Jumbotron};
 use shared::Recipe;
+use uuid::Uuid;
 use yew::{prelude::*, services::fetch::FetchTask};
 use yew_router::prelude::*;
 
@@ -22,6 +23,8 @@ pub(crate) struct Home {
 pub(crate) enum Msg {
     Fetch,
     Fetched(String),
+    Delete(Uuid),
+    Deleted,
     Failure(String),
     ClearAlert,
 }
@@ -51,14 +54,17 @@ impl Component for Home {
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
+        use Msg::*;
         let result = match msg {
-            Self::Message::Fetch => self.handle_fetch(),
-            Self::Message::Fetched(body) => self.handle_fetched(body),
-            Self::Message::Failure(error) => {
+            Fetch => self.handle_fetch(),
+            Fetched(body) => self.handle_fetched(body),
+            Delete(id) => self.handle_delete(id),
+            Deleted => self.handle_deleted(),
+            Failure(error) => {
                 self.alert_ctx = Context::Danger(error);
                 Ok(true)
             }
-            Self::Message::ClearAlert => {
+            ClearAlert => {
                 self.alert_ctx = Context::None;
                 Ok(true)
             }
@@ -83,6 +89,37 @@ impl Component for Home {
 
     fn view(&self) -> Html {
         let recipes = &self.state.recipes;
+        let view_recipe = move |r: &Recipe| {
+            let delete = if let Some(id) = r.id {
+                html! {
+                    <Button
+                        margin=Margin(Edge::Right, 3)
+                        color=Color::Secondary
+                        on_click=self.link.callback(move |_| Msg::Delete(id.clone()))
+                    >
+                        { "x" }
+                    </Button>
+                }
+            } else {
+                html! {
+                    <Button
+                        margin=Margin(Edge::Right, 3)
+                        color=Color::Secondary
+                        disabled=true
+                    >
+                        { "x" }
+                    </Button>
+                }
+            };
+            html! {
+                <li class="list-group-item">
+                    { delete }
+                    <RouterAnchor<AppRoute> route=AppRoute::View(r.id.clone().unwrap().to_string())>
+                        { r.url.clone() }
+                    </RouterAnchor<AppRoute>>
+                </li>
+            }
+        };
         html! {
             <Container>
                 <Jumbotron margin=Margin(Edge::Bottom, 3)>
@@ -92,10 +129,11 @@ impl Component for Home {
                 { self.view_toolbar() }
                 <Card border=Border(Edge::All, Color::Primary)>
                     <CardBody>
+                        { self.view_pagination("mb-3") }
                         <ul class="list-group">
                             { for recipes.iter().map(view_recipe) }
                         </ul>
-                        { self.view_pagination() }
+                        { self.view_pagination("mt-3") }
                     </CardBody>
                 </Card>
             </Container>
@@ -116,9 +154,9 @@ impl Home {
         }
     }
 
-    fn view_pagination(&self) -> Html {
+    fn view_pagination(&self, class: &str) -> Html {
         html! {
-            <div class="btn-toolbar mt-3">
+            <div class=format!("btn-toolbar {}", class)>
                 <div class="btn-group">
                 { self.view_prev_button() }
                 { self.view_next_button() }
@@ -130,38 +168,36 @@ impl Home {
     fn view_prev_button(&self) -> Html {
         match show_prev_button(&self.props.offset, self.state.limit) {
             Some(0) => html! {
-                <RouterButton<AppRoute> classes="btn btn-primary" route=AppRoute::Index>
+                <RouterButton<AppRoute> classes="btn btn-secondary" route=AppRoute::Index>
                     { "Previous" }
                 </RouterButton<AppRoute>>
             },
             Some(offset) => html! {
-                <RouterButton<AppRoute> classes="btn btn-primary" route=AppRoute::IndexOffset(offset)>
+                <RouterButton<AppRoute> classes="btn btn-secondary" route=AppRoute::IndexOffset(offset)>
                     { "Previous" }
                 </RouterButton<AppRoute>>
             },
-            None => html! {},
+            None => html! {
+                <Button disabled=true>
+                    { "Previous" }
+                </Button>
+            },
         }
     }
 
     fn view_next_button(&self) -> Html {
         match show_next_button(&self.props.offset, self.state.limit, self.state.total) {
             Some(offset) => html! {
-                <RouterButton<AppRoute> classes="btn btn-primary" route=AppRoute::IndexOffset(offset)>
+                <RouterButton<AppRoute> classes="btn btn-secondary" route=AppRoute::IndexOffset(offset)>
                     { "Next" }
                 </RouterButton<AppRoute>>
             },
-            None => html! {},
+            None => html! {
+                <Button disabled=true>
+                    { "Next" }
+                </Button>
+            },
         }
-    }
-}
-
-fn view_recipe(r: &Recipe) -> Html {
-    html! {
-        <li class="list-group-item">
-            <RouterAnchor<AppRoute> route=AppRoute::View(r.id.clone().unwrap().to_string())>
-                { r.url.clone() }
-            </RouterAnchor<AppRoute>>
-        </li>
     }
 }
 
