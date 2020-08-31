@@ -24,6 +24,8 @@ pub(crate) enum AppRoute {
     Add,
     #[to = "/view/{url}"]
     View(String),
+    #[to = "/offset/{offset}"]
+    IndexOffset(i64),
     #[to = "/"]
     Index,
 }
@@ -47,11 +49,13 @@ impl Component for Index {
     }
 
     fn view(&self) -> Html {
+        // TODO add route for offset
         html! {
             <Router<AppRoute>
                 render = Router::render(|switch: AppRoute| {
                     match switch {
                         AppRoute::Index => html! { <Home /> },
+                        AppRoute::IndexOffset(offset) => html! { <Home offset=offset /> },
                         AppRoute::Add=> html! { <Editor mode=Mode::Edit /> },
                         AppRoute::View(id) =>
                             if let Ok(id) = id.parse::<Uuid>() {

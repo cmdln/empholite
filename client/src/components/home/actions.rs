@@ -13,9 +13,15 @@ use yew::{
 impl Home {
     pub(super) fn handle_fetch(&mut self) -> Result<ShouldRender> {
         debug!("Recipe {:?}", self.state);
-        let request = Request::get("/ajax/recipe/")
-            .body(Nothing)
-            .map_err(anyhow::Error::from)?;
+        let request = if let Some(offset) = self.props.offset {
+            Request::get(format!("/ajax/recipe/offset/{}", offset))
+                .body(Nothing)
+                .map_err(anyhow::Error::from)?
+        } else {
+            Request::get("/ajax/recipe/")
+                .body(Nothing)
+                .map_err(anyhow::Error::from)?
+        };
         let task = FetchService::fetch(
             request,
             self.link.callback(

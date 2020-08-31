@@ -1,7 +1,7 @@
 use super::db;
 use crate::{
     config::{self, KeyPathKind},
-    models::{NewRecipe, NewRule, Recipe, RecipeCascaded, Rule},
+    models::{NewRecipe, NewRule, RecipeCascaded, Rule},
     DbPool,
 };
 use actix_web::{
@@ -11,27 +11,26 @@ use actix_web::{
 };
 use anyhow::bail;
 use log::debug;
-use serde_json::json;
 use std::convert::TryInto;
 use uuid::Uuid;
 
+#[actix_web::get("/ajax/recipe/offset/{offset}")]
+pub(crate) async fn list_recipes_page(db: Data<DbPool>, offset: Path<i64>) -> Result<HttpResponse> {
+    let json = web::block(move || {
+        super::list_recipes_offset_limit(db, offset.into_inner(), super::DEFAULT_LIMIT)
+    })
+    .await
+    .map_err(ErrorInternalServerError)?;
+    Ok(HttpResponse::Ok().json(json))
+}
+
 #[actix_web::get("/ajax/recipe/")]
 pub(crate) async fn list_recipes(db: Data<DbPool>) -> Result<HttpResponse> {
-    let (total, recipes): (_, Vec<Recipe>) =
-        web::block(move || db::load_recipes(&db, super::DEFAULT_OFFSET, super::DEFAULT_LIMIT))
-            .await
-            .map_err(ErrorInternalServerError)?;
-    let recipes: Vec<shared::Recipe> = recipes
-        .into_iter()
-        .map(Recipe::try_into)
-        .collect::<anyhow::Result<_>>()
-        .map_err(ErrorInternalServerError)?;
-    let json = json! {{
-        "total": total,
-        "offset": super::DEFAULT_OFFSET,
-        "limit": super::DEFAULT_LIMIT,
-        "recipes": recipes,
-    }};
+    let json = web::block(move || {
+        super::list_recipes_offset_limit(db, super::DEFAULT_OFFSET, super::DEFAULT_LIMIT)
+    })
+    .await
+    .map_err(ErrorInternalServerError)?;
     Ok(HttpResponse::Ok().json(json))
 }
 

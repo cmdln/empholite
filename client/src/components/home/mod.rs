@@ -16,6 +16,7 @@ pub(crate) struct Home {
     fetch_tsk: Option<FetchTask>,
     state: RecipesPage,
     alert_ctx: Context,
+    props: Props,
 }
 
 pub(crate) enum Msg {
@@ -25,11 +26,17 @@ pub(crate) enum Msg {
     ClearAlert,
 }
 
+#[derive(Properties, Default, Clone, PartialEq)]
+pub(crate) struct Props {
+    #[prop_or_default]
+    pub(crate) offset: Option<i64>,
+}
+
 impl Component for Home {
     type Message = Msg;
-    type Properties = ();
+    type Properties = Props;
 
-    fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
+    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
         link.send_message(Self::Message::Fetch);
         let fetch_tsk = None;
         let state = RecipesPage::default();
@@ -39,6 +46,7 @@ impl Component for Home {
             fetch_tsk,
             state,
             alert_ctx,
+            props,
         }
     }
 
@@ -64,8 +72,13 @@ impl Component for Home {
         }
     }
 
-    fn change(&mut self, _: Self::Properties) -> ShouldRender {
-        false
+    fn change(&mut self, props: Self::Properties) -> ShouldRender {
+        if render_on_change(&mut self.props, props) {
+            self.link.send_message(Self::Message::Fetch);
+            true
+        } else {
+            false
+        }
     }
 
     fn view(&self) -> Html {
@@ -82,6 +95,7 @@ impl Component for Home {
                         <ul class="list-group">
                             { for recipes.iter().map(view_recipe) }
                         </ul>
+                        { self.view_pagination() }
                     </CardBody>
                 </Card>
             </Container>
@@ -101,6 +115,44 @@ impl Home {
             </div>
         }
     }
+
+    fn view_pagination(&self) -> Html {
+        html! {
+            <div class="btn-toolbar mt-3">
+                <div class="btn-group">
+                { self.view_prev_button() }
+                { self.view_next_button() }
+                </div>
+            </div>
+        }
+    }
+
+    fn view_prev_button(&self) -> Html {
+        match show_prev_button(&self.props.offset, self.state.limit) {
+            Some(0) => html! {
+                <RouterButton<AppRoute> classes="btn btn-primary" route=AppRoute::Index>
+                    { "Previous" }
+                </RouterButton<AppRoute>>
+            },
+            Some(offset) => html! {
+                <RouterButton<AppRoute> classes="btn btn-primary" route=AppRoute::IndexOffset(offset)>
+                    { "Previous" }
+                </RouterButton<AppRoute>>
+            },
+            None => html! {},
+        }
+    }
+
+    fn view_next_button(&self) -> Html {
+        match show_next_button(&self.props.offset, self.state.limit, self.state.total) {
+            Some(offset) => html! {
+                <RouterButton<AppRoute> classes="btn btn-primary" route=AppRoute::IndexOffset(offset)>
+                    { "Next" }
+                </RouterButton<AppRoute>>
+            },
+            None => html! {},
+        }
+    }
 }
 
 fn view_recipe(r: &Recipe) -> Html {
@@ -110,5 +162,64 @@ fn view_recipe(r: &Recipe) -> Html {
                 { r.url.clone() }
             </RouterAnchor<AppRoute>>
         </li>
+    }
+}
+
+fn show_prev_button(offset: &Option<i64>, limit: i64) -> Option<i64> {
+    match offset {
+        None | Some(0) => None,
+        Some(offset) => Some(if offset - limit < 0 {
+            0
+        } else {
+            offset - limit
+        }),
+    }
+}
+
+fn show_next_button(offset: &Option<i64>, limit: i64, total: i64) -> Option<i64> {
+    match offset {
+        None if total > limit => Some(limit),
+        Some(offset) if offset + limit < total => Some(offset + limit),
+        _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_prev_offset_none() {
+        assert_eq!(None, show_prev_button(&None, 25));
+    }
+
+    #[test]
+    fn test_prev_offset_first() {
+        assert_eq!(None, show_prev_button(&Some(0), 25));
+    }
+
+    #[test]
+    fn test_prev_offset_partial() {
+        assert_eq!(Some(0), show_prev_button(&Some(24), 25));
+    }
+
+    #[test]
+    fn test_prev_offset() {
+        assert_eq!(Some(0i64), show_prev_button(&Some(25), 25));
+        assert_eq!(Some(1i64), show_prev_button(&Some(26), 25));
+    }
+
+    #[test]
+    fn test_next_offset_below_total() {
+        assert_eq!(Some(25), show_next_button(&None, 25, 26));
+        assert_eq!(Some(25), show_next_button(&Some(0), 25, 26));
+        assert_eq!(Some(50), show_next_button(&Some(25), 25, 51));
+    }
+
+    #[test]
+    fn test_next_offset_at_above_total() {
+        assert_eq!(None, show_next_button(&None, 25, 25));
+        assert_eq!(None, show_next_button(&Some(0), 25, 25));
+        assert_eq!(None, show_next_button(&Some(25), 25, 50));
     }
 }
