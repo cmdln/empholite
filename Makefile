@@ -1,4 +1,4 @@
-docker_tag=0.2.4
+docker_tag=0.2.5-beta
 
 all: client/pkg/server_bg.wasm client/pkg/bundle.js
 
@@ -32,5 +32,11 @@ docker:
 	rollup client/main.js --format iife --file client/pkg/bundle.js
 	cargo build -p empholite --release
 	docker build -t cmdln/empholite:latest -t cmdln/empholite:$(docker_tag) .
+
+docker-branch:
+	wasm-pack build --no-typescript --release -t web client
+	rollup client/main.js --format iife --file client/pkg/bundle.js
+	cargo build -p empholite --release
+	docker build -t cmdln/empholite:$(docker_tag) .
 
 .PHONY: all clean client-watch docker

@@ -5,3 +5,4 @@
 !client/pkg/bundle.js
 !static/
 !migrations/
+!database/entry.sh
