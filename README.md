@@ -18,12 +18,16 @@ A recipe has an endpoint, which is a full url including scheme and hostname so t
 * Authenticated call - In order for this rule to match, it expects an "Authorization" header whose value is "Bearer <a base64 encoded JWT>". You must specific a public key for this rule. If `KEY_PATH_KIND` is "file" then `KEY_PATH` must be the location to a JSON file and the rule must have a valid property path, for example `public.auth.001`, to a PEM encoded string value of the key. If `KEY_PATH_KIND` is "directory" then `KEY_PATH` must be a directory and the rule must have a value that is a relative path from this directory to a PEM encoded public key file. The public key is used to verify the signature on the JWT.
 * Subject - In order for this rule to match, it expects an "Authorization" header, just like the authenticated call rule. The rule must have a subject value and will only match if the decoded JWT from the auth header contains a "subject" claim that matches the rule's subject value.
 
+## REST API
+
+Empholite supports a [REST API](REST.md) to make it easier to utilize as part of test automation.
+
 ## To Do
 
-* [ ] Add REST API
+* [x] Add REST API
 * [ ] Add the ability to proxy between two live services, recording calls and responses which can be copied and edited to create new recipes.
 * [ ] Add ability to use arbitrary response status codes in a recipe.
-* [ ] Add a rule to match arbitrary header matches.
+* [ ] Add a rule to match arbitrary headers.
 * [ ] Add support for path parameters.
 * [ ] Add support for variable replacement in the payload, for instance to use a path parameter as a value.
 * [ ] Add other content types for payloads.
