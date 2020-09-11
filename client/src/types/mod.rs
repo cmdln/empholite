@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use uuid::Uuid;
-use validator::{Validate, ValidationError};
+use validator::ValidationError;
 
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub(super) enum RuleType {
