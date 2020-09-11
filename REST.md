@@ -90,6 +90,33 @@ Example with curl:
 $ curl -X PUT -d @your_recipe_file.json https://localhost:8989/api/v1/recipe
 ```
 
+## GET /api/v1/recipe/{id}
+
+Use this endpoint to get details for a specific recipe, including all of its rules.
+
+Example response:
+
+```
+{
+  "id": "<uuid string>",
+  "url": "http://test.local/api/rest",
+  "rules": [
+      {
+          "Authenticated":{"key_path":"foo"}
+      }
+  ],
+  "payload": {
+      "foo": "bar"
+  }
+},
+```
+
+Example with curl:
+
+```
+$ curl https://localhost:8989/api/v1/recipe/<ID for a recipe>
+```
+
 ## GET /api/v1/recipe
 
 Use this endpoint to get a page of recipes.
@@ -100,7 +127,7 @@ Use this endpoint to get a page of recipes.
 
 **limit**: The number of recipes in this page.
 
-**recipes**: An array of JSON objects whose shape matches the PUT body described above.
+**recipes**: An array of JSON objects whose shape matches the GET body described above except without the rules property.
 
 Example response:
 
@@ -113,11 +140,6 @@ Example response:
         {
            "id": "<uuid string>",
            "url": "http://test.local/api/rest",
-           "rules": [
-               {
-                   "Authenticated":{"key_path":"foo"}
-               }
-           ],
            "payload": {
                "foo": "bar"
            }
