@@ -134,10 +134,11 @@ pub(crate) async fn update_recipe(db_pool: Data<DbPool>, recipe: Bytes) -> Resul
 
 #[actix_web::delete("/api/v1/recipe/{id}")]
 pub(crate) async fn delete_recipe(db_pool: Data<DbPool>, path: Path<Uuid>) -> Result<HttpResponse> {
-    web::block(move || db::delete_recipe(&db_pool, path.into_inner()))
+    let to_delete = path.into_inner();
+    web::block(move || db::delete_recipe(&db_pool, to_delete))
         .await
         .map_err(ErrorInternalServerError)?;
-    Ok(HttpResponse::Ok().finish())
+    Ok(HttpResponse::Ok().body(format!("Deleted recipe, {}", to_delete)))
 }
 
 fn validate_post(post: Value) -> anyhow::Result<shared::Recipe> {
