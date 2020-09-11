@@ -20,6 +20,12 @@ Example POST body:
 }
 ```
 
+Example with curl:
+
+```
+$ curl -X POST -d @your_recipe_file.json https://localhost:8989/api/v1/recipe
+```
+
 ### url
 
 *Type*: String, required
@@ -78,6 +84,12 @@ This is the JSON that is served if the rules all match for this recipe.
 
 Use this endpoint with a PUT request to update an existing recipe. The PUT body is the same as the POST body, above, for creating a recipe with the addition of an "id" property whose value, a String, must be parseable as a UUID. "id" is required.
 
+Example with curl:
+
+```
+$ curl -X PUT -d @your_recipe_file.json https://localhost:8989/api/v1/recipe
+```
+
 ## GET /api/v1/recipe
 
 Use this endpoint to get a page of recipes.
@@ -115,10 +127,28 @@ Example response:
 }
 ```
 
+Example with curl:
+
+```
+$ curl https://localhost:8989/api/v1/recipe | jq
+```
+
 ## GET /api/v1/recipe/offset/{offset}
 
 Use this endpoint to get a page of recipes, starting at a specific offset. The response body shape is the same as the endpoint without `/offset/{offset}`, above.
 
+Example with curl:
+
+```
+$ curl https://localhost:8989/api/v1/recipe/offset/25 | jq
+```
+
 ## DELETE /api/v1/recipe/{uuid}
 
 Deletes the recipe with the matching `uuid` value.
+
+Example with curl:
+
+```
+$ curl -X DELETE https://localhost:8989/api/v1/recipe/<ID for a recipe>
+```
