@@ -1,6 +1,6 @@
 use super::db;
 use crate::{
-    models::{HttpVerb, NewRecipe, NewRule, RecipeCascaded, RuleType},
+    models::{HttpVerb, NewRecipe, NewRule, RecipeCascaded, Rule, RuleType},
     DbPool,
 };
 use actix_web::{
@@ -86,22 +86,42 @@ pub(crate) async fn update_recipe(db_pool: Data<DbPool>, recipe: Bytes) -> Resul
         .with_context(|| "Could not parse the post body as JSON!")
         .map_err(ErrorBadRequest)?;
     let shared::Recipe {
+        id,
         url,
         payload,
         rules,
         ..
     } = validate_put(recipe).map_err(ErrorBadRequest)?;
-    let payload = serde_json::to_string(&payload).map_err(ErrorInternalServerError)?;
+    let id = id
+        .ok_or_else(|| format_err!("Must specify Id when udpating a recipe!"))
+        .map_err(ErrorBadRequest)?;
+    let payload = serde_json::to_string(&payload)?;
     let (recipe, rules) = {
-        let to_create = NewRecipe { url, payload };
+        use shared::Rule::*;
         web::block(move || {
-            db::create_recipe(&db_pool, to_create).and_then(|recipe| {
-                let to_create: Vec<NewRule> = rules
+            let count = db::update_recipe(&db_pool, id, url, payload)?;
+            if count == 1 {
+                let (to_retain, to_create): (Vec<shared::Rule>, Vec<shared::Rule>) =
+                    rules.into_iter().partition(|rule| match rule {
+                        Authenticated { id, .. } | Subject { id, .. } | HttpMethod { id, .. } => {
+                            id.is_some()
+                        }
+                    });
+                let to_retain = to_retain
                     .into_iter()
-                    .map(|rule| (recipe.id, rule).into())
-                    .collect();
-                db::create_rules(&db_pool, &to_create).map(|rules| (recipe, rules))
-            })
+                    .map(|rule| (id, rule).try_into())
+                    .collect::<anyhow::Result<Vec<Rule>>>()?;
+                let to_create = to_create
+                    .into_iter()
+                    .map(|rule| (id, rule).into())
+                    .collect::<Vec<NewRule>>();
+                db::delete_rules(&db_pool, id, &to_retain)?;
+                db::update_rules(&db_pool, to_retain)?;
+                db::create_rules(&db_pool, &to_create)?;
+                db::find_recipe(&db_pool, id)
+            } else {
+                bail!("Unable to update recipe, {}", id)
+            }
         })
         .await
         .map_err(ErrorInternalServerError)?
