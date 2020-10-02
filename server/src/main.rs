@@ -67,6 +67,7 @@ async fn main() -> std::io::Result<()> {
             .service(handlers::ajax::list_recipes)
             .service(handlers::ajax::upsert_recipe)
             .service(handlers::ajax::delete_recipe)
+            .service(handlers::ajax::complete_key_path)
             .service(handlers::ajax::get_config)
             .route("/api{tail:.*}", get().to(handlers::serve_recipe))
             .route("/api{tail:.*}", post().to(handlers::serve_recipe))

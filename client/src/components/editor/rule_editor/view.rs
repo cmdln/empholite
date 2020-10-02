@@ -1,4 +1,4 @@
-use super::{verb_select::VerbSelect, Msg, RuleEditor};
+use super::{key_path::KeyPathSelector, verb_select::VerbSelect, Msg, RuleEditor};
 use crate::RuleType;
 use bootstrap_rs::{input::InputType, prelude::*, Button, ButtonToolbar, Input};
 use validator::ValidationErrors;
@@ -45,32 +45,22 @@ impl RuleEditor {
     }
 
     fn render_key_path(&self) -> Html {
-        let kind_help = if self.props.key_path_is_file {
-            "The value for the Key Reference is the property path to a specific key within a JSON file, for example \"my_service.0\"."
-        } else {
-            "The value for the Key Path is the path relative to a directory full of keys, for example \"/qa/my_service/public/sso/0\"."
-        };
-        let label_txt = if self.props.key_path_is_file {
-            "Key Reference"
-        } else {
-            "Key Path"
-        };
+        let class = super::validation_class_for_rule(
+            &self.props.errors,
+            RuleType::Authenticated,
+            &self.state.rule_type,
+            "invalid_authenticated_rule",
+        );
         html! {
             <div class="col">
-                <label for="subject">{ label_txt }</label>
-                <Input
+                <KeyPathSelector
                     name="key_path"
-                    class=validation_class_for_rule(&self.props.errors, RuleType::Authenticated, &self.state.rule_type, "invalid_authenticated_rule", )
-                    input_type=InputType::Text
+                    key_path_is_file=self.props.key_path_is_file
+                    class=class
                     on_change=self.link.callback(move |value| Msg::KeyPathChange(value))
                     aria_describedby="key_path_help"
                     value=self.state.key_path.clone().unwrap_or_default()
                 />
-                <small id="key_path_help">
-                    { format!("This rule will match if the authentication JWT can be verified with the
-                    provided key. {}", kind_help) }
-                </small>
-                { self.render_validation_feedback("invalid_authenticated_rule") }
             </div>
         }
     }
@@ -81,7 +71,7 @@ impl RuleEditor {
                 <label for="subject">{ "Subject" }</label>
                 <Input
                     name="subject"
-                    class=validation_class_for_rule(&self.props.errors, RuleType::Subject, &self.state.rule_type, "invalid_subject_rule")
+                    class=super::validation_class_for_rule(&self.props.errors, RuleType::Subject, &self.state.rule_type, "invalid_subject_rule")
                     input_type=InputType::Text
                     on_change=self.link.callback(move |value| Msg::SubjectChange(value))
                     aria_describedby="subject_help"
@@ -98,7 +88,7 @@ impl RuleEditor {
             <div class="col">
                 <VerbSelect
                     verb=self.state.http_method.clone()
-                    class=validation_class_for_rule(&self.props.errors, RuleType::HttpMethod, &self.state.rule_type, "invalid_http_method_rule")
+                    class=super::validation_class_for_rule(&self.props.errors, RuleType::HttpMethod, &self.state.rule_type, "invalid_http_method_rule")
                     on_change=self.link.callback(Msg::HttpMethodChange)
                     on_error=self.link.callback(Msg::Failure)
                 />
@@ -154,7 +144,7 @@ fn validation_class(
 ) -> Classes {
     let mut class = Classes::from(prefix);
     match errors.as_ref() {
-        Some(Some(errors)) if invalid_for(errors, code) => {
+        Some(Some(errors)) if super::invalid_for(errors, code) => {
             class.push("is-invalid");
         }
         Some(Some(_)) | Some(None) => {
@@ -163,33 +153,4 @@ fn validation_class(
         None => {}
     }
     class
-}
-
-fn validation_class_for_rule(
-    errors: &Option<Option<Box<ValidationErrors>>>,
-    for_rule_type: RuleType,
-    selected_rule_type: &Option<RuleType>,
-    code: &str,
-) -> Classes {
-    if selected_rule_type
-        .as_ref()
-        .map(|selected| selected == &for_rule_type)
-        .unwrap_or_default()
-    {
-        match errors.as_ref() {
-            Some(Some(errors)) if invalid_for(errors, code) => Classes::from("is-invalid"),
-            Some(Some(_)) | Some(None) => Classes::from("is-valid"),
-            None => Classes::new(),
-        }
-    } else {
-        Classes::new()
-    }
-}
-
-fn invalid_for(errors: &ValidationErrors, code: &str) -> bool {
-    let errors = errors.field_errors();
-    errors
-        .get("__all__")
-        .map(|errors| errors.iter().any(|error| error.code == code))
-        .unwrap_or_default()
 }

@@ -5,13 +5,14 @@ use crate::{
     DbPool,
 };
 use actix_web::{
-    error::ErrorInternalServerError,
+    error::{ErrorBadRequest, ErrorInternalServerError},
     web::{self, Data, Json, Path},
     HttpResponse, Result,
 };
-use anyhow::bail;
+use anyhow::{bail, format_err};
 use log::debug;
-use std::convert::TryInto;
+use serde_json::{self, Map, Value};
+use std::{convert::TryInto, fs, path::PathBuf};
 use uuid::Uuid;
 
 #[actix_web::get("/ajax/recipe/offset/{offset}")]
@@ -113,6 +114,120 @@ pub(crate) async fn delete_recipe(db_pool: Data<DbPool>, path: Path<Uuid>) -> Re
         .await
         .map_err(ErrorInternalServerError)?;
     Ok(HttpResponse::Ok().finish())
+}
+
+#[actix_web::get("/ajax/key_path/{tail:.*}")]
+pub(crate) async fn complete_key_path(selected_path: Path<String>) -> Result<HttpResponse> {
+    debug!("Key path: {:?}", selected_path);
+    let selected_path = selected_path.into_inner();
+    let selected: Vec<String> = if selected_path.is_empty() {
+        Vec::new()
+    } else {
+        selected_path
+            .split('/')
+            .map(ToOwned::to_owned)
+            .filter(|c| !c.trim().is_empty())
+            .collect()
+    };
+    debug!("Parsed: {:?}", selected);
+    let entries = match config::KEY_PATH_KIND.clone() {
+        KeyPathKind::Directory(mut key_path) => {
+            let selected_path = PathBuf::from(selected.join("/"));
+            key_path.push(selected_path);
+            let entries = fs::read_dir(key_path)?;
+            let candidates: Result<Vec<shared::KeyPathComponent>> = entries
+                .map(|entry| {
+                    let entry = entry.map_err(ErrorInternalServerError)?;
+                    let leaf = entry.path().is_dir();
+                    entry
+                        .path()
+                        .file_name()
+                        .ok_or_else(|| {
+                            format_err!(
+                                "Could not determine filename for {}",
+                                entry.path().display()
+                            )
+                        })
+                        .map(|os_str| os_str.to_os_string())
+                        .and_then(|os_string| {
+                            os_string.into_string().map_err(|error| {
+                                format_err!(
+                                    "Filename contained a non-Unicode character! {:?}",
+                                    error
+                                )
+                            })
+                        })
+                        .map(|component| shared::KeyPathComponent { leaf, component })
+                        .map_err(ErrorInternalServerError)
+                })
+                .collect();
+            let candidates = candidates?;
+            shared::KeyPathCompletions {
+                candidates,
+                selected,
+                kind: shared::KeyPathKind::Directory,
+            }
+        }
+        KeyPathKind::File(ref key_path) => {
+            let key_file = fs::read_to_string(key_path)?;
+            let key_material: Value = serde_json::from_str(&key_file)?;
+            let key_ref = selected.clone();
+            if key_ref.is_empty() {
+                let key_material = key_material
+                    .as_object()
+                    .ok_or_else(|| {
+                        format_err!(
+                            "The root of the JSON Key file, {}, must be an object!",
+                            key_path.display()
+                        )
+                    })
+                    .map_err(ErrorInternalServerError)?;
+                into_completions(&key_material, selected)
+            } else {
+                let nested = key_ref
+                    .iter()
+                    .fold(Ok(&key_material), |nested, prop| {
+                        nested.and_then(|nested| {
+                            nested.get(prop).ok_or_else(|| {
+                                format_err!(
+                                    "\"{}\" is not a valid key reference!",
+                                    key_ref.join(".")
+                                )
+                            })
+                        })
+                    })
+                    .map_err(ErrorBadRequest)?;
+                if let Value::Object(nested) = nested {
+                    into_completions(nested, selected)
+                } else {
+                    return Err(ErrorBadRequest(format_err!(
+                        "\"{}\" is not a valid key reference!",
+                        key_ref.join(".")
+                    )));
+                }
+            }
+        }
+    };
+    Ok(HttpResponse::Ok().json(entries))
+}
+
+fn into_completions(
+    key_material: &Map<String, Value>,
+    selected: Vec<String>,
+) -> shared::KeyPathCompletions {
+    // TODO set leaf based on value not being an object, i.e. being a scalar or an array
+    let candidates = key_material
+        .keys()
+        .map(|key| shared::KeyPathComponent {
+            leaf: false,
+            component: key.clone(),
+        })
+        .collect();
+    shared::KeyPathCompletions {
+        candidates,
+        selected,
+        kind: shared::KeyPathKind::File,
+    }
 }
 
 #[actix_web::get("/ajax/config")]
