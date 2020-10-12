@@ -70,8 +70,10 @@ impl Component for RuleEditor {
                 true
             }
             Ok(false) => false,
-            // TODO emit error
-            Err(_) => false,
+            Err(error) => {
+                self.props.on_error.emit(format!("{}", error));
+                false
+            }
         }
     }
 

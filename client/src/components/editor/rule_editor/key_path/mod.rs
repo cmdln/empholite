@@ -1,18 +1,45 @@
 mod actions;
+mod view;
 
 use crate::RuleType;
-use anyhow::Result;
+use anyhow::{format_err, Result};
+use bootstrap_rs::{prelude::*, Button};
 use validator::ValidationErrors;
 use yew::{prelude::*, services::fetch::FetchTask};
 
 pub(crate) struct KeyPathSelector {
     link: ComponentLink<Self>,
     fetch_tsk: Option<FetchTask>,
-    state: shared::KeyPathCompletions,
+    state: KeyPathCompletions,
     props: Props,
+    select_ref: NodeRef,
 }
 
-#[derive(Properties, Debug, Clone)]
+struct KeyPathCompletions {
+    candidates: Vec<shared::KeyPathComponent>,
+    selected: Vec<String>,
+    kind: shared::KeyPathKind,
+    complete: bool,
+}
+
+impl From<shared::KeyPathCompletions> for KeyPathCompletions {
+    fn from(k: shared::KeyPathCompletions) -> Self {
+        let shared::KeyPathCompletions {
+            candidates,
+            selected,
+            kind,
+        } = k;
+        let complete = false;
+        Self {
+            candidates,
+            selected,
+            kind,
+            complete,
+        }
+    }
+}
+
+#[derive(Properties, Debug, Clone, PartialEq)]
 pub(crate) struct Props {
     #[prop_or_default]
     pub(crate) name: Option<String>,
@@ -22,6 +49,7 @@ pub(crate) struct Props {
     #[prop_or_default]
     pub(crate) class: Classes,
     pub(crate) on_change: Callback<String>,
+    pub(crate) on_error: Callback<String>,
     #[prop_or_default]
     pub(crate) errors: Option<Option<Box<ValidationErrors>>>,
     #[prop_or_default]
@@ -32,6 +60,7 @@ pub(crate) enum Msg {
     Fetch,
     Fetched(String),
     KeyPathChange(ChangeData),
+    KeyPathReset,
     Failure(String),
 }
 
@@ -40,18 +69,28 @@ impl Component for KeyPathSelector {
     type Properties = Props;
 
     fn create(props: Props, link: ComponentLink<Self>) -> Self {
-        link.send_message(Msg::Fetch);
+        let complete = props.value.as_ref().is_some();
+        if !complete {
+            link.send_message(Msg::Fetch);
+        }
         let fetch_tsk = None;
-        let state = shared::KeyPathCompletions {
+        let state = KeyPathCompletions {
             candidates: Vec::new(),
-            selected: Vec::new(),
+            selected: props
+                .value
+                .as_deref()
+                .map(into_selected)
+                .unwrap_or_default(),
             kind: shared::KeyPathKind::Directory,
+            complete,
         };
+        let select_ref = NodeRef::default();
         Self {
             link,
             fetch_tsk,
             state,
             props,
+            select_ref,
         }
     }
 
@@ -61,72 +100,38 @@ impl Component for KeyPathSelector {
             Fetch => self.handle_fetch(),
             Fetched(body) => self.handle_fetched(body),
             KeyPathChange(ChangeData::Select(selected)) => self.handle_key_change(selected),
-            _ => Ok(false),
+            KeyPathChange(_) => Ok(false),
+            KeyPathReset => self.handle_key_reset(),
+            Failure(error) => Err(format_err!("{}", error)),
         };
         match result {
-            Ok(true) => {
-                // TODO add change handler prop
-                // self.props.on_change.emit(self.state.clone());
-                true
+            Ok(should_render) => should_render,
+            Err(error) => {
+                self.props.on_error.emit(format!("{}", error));
+                false
             }
-            Ok(false) => false,
-            // TODO emit error
-            Err(_) => false,
         }
     }
 
-    fn change(&mut self, _: Self::Properties) -> ShouldRender {
-        false
+    fn change(&mut self, props: Self::Properties) -> ShouldRender {
+        render_on_change(&mut self.props, props)
     }
 
     fn view(&self) -> Html {
-        let kind_help = if self.props.key_path_is_file {
-            "The value for the Key Reference is the property path to a specific key within a JSON file, for example \"my_service.0\"."
-        } else {
-            "The value for the Key Path is the path relative to a directory full of keys, for example \"/qa/my_service/public/sso/0\"."
-        };
-        let label_txt = if self.props.key_path_is_file {
-            "Key Reference"
-        } else {
-            "Key Path"
-        };
-        let prompt = if self.props.key_path_is_file {
-            "next property for key reference"
-        } else {
-            "next component for key path"
-        };
-        let class = Classes::from("form-control");
-        let class = class.extend(self.props.class.clone());
-        let class = class.extend(super::validation_class_for_rule(
-            &self.props.errors,
-            RuleType::Authenticated,
-            &Some(RuleType::Authenticated),
-            "invalid_authenticated_rule",
-        ));
         html! {
             <div class="col">
-                <label for="key_path">{ label_txt }</label>
-                <select
-                    name="key_path"
-                    class=class
-                    onchange=self.link.callback(Msg::KeyPathChange)
-                    aria_describedby="key_path_help"
-                >
-                    <option selected=true disabled=true>{ format!("Choose {}", prompt) }</option>
-                    { for self.state.candidates.iter().map(view_candidates) }
-                </select>
+                { self.view_selected() }
+                { self.view_select() }
                 <small id="key_path_help">
                     { format!("This rule will match if the authentication JWT can be verified with the
-                    provided key. {}", kind_help) }
+                    provided key. {}", self.kind_help()) }
                 </small>
-                { super::render_validation_feedback(&self.props.errors, "invalid_authenticated_rule") }
             </div>
         }
     }
 }
 
-fn view_candidates(c: &shared::KeyPathComponent) -> Html {
-    html! {
-        <option>{ &c.component }</option>
-    }
+fn into_selected(s: &str) -> Vec<String> {
+    let separator = if s.contains('/') { '/' } else { '.' };
+    s.split(separator).map(ToOwned::to_owned).collect()
 }

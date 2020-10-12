@@ -34,8 +34,24 @@ impl KeyPathSelector {
     }
 
     pub(super) fn handle_fetched(&mut self, body: String) -> Result<ShouldRender> {
-        self.state = serde_json::from_str(&body)?;
+        self.state = serde_json::from_str::<shared::KeyPathCompletions>(&body)?.into();
+        if self.state.candidates.len() == 1 && self.state.candidates[0].leaf {
+            self.state
+                .selected
+                .push(self.state.candidates[0].component.clone());
+            self.complete();
+        } else if let Some(select) = self.select_ref.cast::<HtmlSelectElement>() {
+            select.set_selected_index(0);
+        }
         self.fetch_tsk = None;
+        Ok(true)
+    }
+
+    pub(super) fn handle_key_reset(&mut self) -> Result<ShouldRender> {
+        self.state.selected = Vec::new();
+        self.state.complete = false;
+        self.link.send_message(Msg::Fetch);
+        self.props.on_change.emit(String::default());
         Ok(true)
     }
 
@@ -43,14 +59,23 @@ impl KeyPathSelector {
         &mut self,
         selected: HtmlSelectElement,
     ) -> Result<ShouldRender> {
-        use log::debug;
-        let selected = (selected.selected_index() - 1) as usize;
-        debug!("Selected component, {}", selected);
-        let selected = self.state.candidates[selected].component.clone();
-        self.state.selected.push(selected.clone());
-        self.props.on_change.emit(selected);
-        debug!("Issuing a new fetch");
-        self.link.send_message(Msg::Fetch);
+        if selected.selected_index() != 0 {
+            let selected = (selected.selected_index() - 1) as usize;
+            let selected = &self.state.candidates[selected];
+            self.state.selected.push(selected.component.clone());
+            if selected.leaf {
+                self.complete();
+            } else {
+                self.link.send_message(Msg::Fetch);
+            }
+        }
         Ok(true)
+    }
+
+    fn complete(&mut self) {
+        self.state.complete = true;
+        self.props
+            .on_change
+            .emit(self.state.selected.join(self.separator()));
     }
 }

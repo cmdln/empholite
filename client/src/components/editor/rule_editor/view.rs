@@ -58,8 +58,10 @@ impl RuleEditor {
                     key_path_is_file=self.props.key_path_is_file
                     class=class
                     on_change=self.link.callback(move |value| Msg::KeyPathChange(value))
+                    on_error=self.link.callback(move |error| Msg::Failure(error))
                     aria_describedby="key_path_help"
                     value=self.state.key_path.clone().unwrap_or_default()
+                    errors=self.props.errors.clone()
                 />
             </div>
         }
