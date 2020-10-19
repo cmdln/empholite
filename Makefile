@@ -1,4 +1,4 @@
-docker_tag=0.2.5
+docker_tag=0.3.0-beta
 
 all: client/pkg/server_bg.wasm client/pkg/bundle.js
 
@@ -40,4 +40,4 @@ docker-branch:
 	cargo build -p empholite --release
 	docker build -t cmdln/empholite:$(docker_tag) .
 
-.PHONY: all clean client-watch docker
+.PHONY: all clean client-watch docker docker-branch
