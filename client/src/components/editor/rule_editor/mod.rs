@@ -1,8 +1,9 @@
 mod actions;
+mod key_path;
 mod verb_select;
 mod view;
 
-use crate::{prelude::*, HttpVerb, Rule};
+use crate::{prelude::*, HttpVerb, Rule, RuleType};
 use bootstrap_rs::prelude::*;
 use validator::ValidationErrors;
 use yew::prelude::*;
@@ -69,8 +70,10 @@ impl Component for RuleEditor {
                 true
             }
             Ok(false) => false,
-            // TODO emit error
-            Err(_) => false,
+            Err(error) => {
+                self.props.on_error.emit(format!("{}", error));
+                false
+            }
         }
     }
 
@@ -88,4 +91,57 @@ impl Component for RuleEditor {
     fn view(&self) -> Html {
         self.render_editor()
     }
+}
+
+fn render_validation_feedback(
+    errors: &Option<Option<Box<ValidationErrors>>>,
+    code: &'static str,
+) -> Html {
+    match errors.as_ref() {
+        Some(Some(errors)) => {
+            let errors = errors.field_errors();
+            if let Some(errors) = errors.get("__all__") {
+                html! {
+                    <div class="invalid-feedback">
+                        { for errors.iter().filter(|error| error.code == code).filter_map(|error| error.message.as_ref()) }
+                    </div>
+                }
+            } else {
+                html! {}
+            }
+        }
+        Some(None) => {
+            html! {}
+        }
+        None => html! {},
+    }
+}
+
+fn validation_class_for_rule(
+    errors: &Option<Option<Box<ValidationErrors>>>,
+    for_rule_type: RuleType,
+    selected_rule_type: &Option<RuleType>,
+    code: &str,
+) -> Classes {
+    if selected_rule_type
+        .as_ref()
+        .map(|selected| selected == &for_rule_type)
+        .unwrap_or_default()
+    {
+        match errors.as_ref() {
+            Some(Some(errors)) if invalid_for(errors, code) => Classes::from("is-invalid"),
+            Some(Some(_)) | Some(None) => Classes::from("is-valid"),
+            None => Classes::new(),
+        }
+    } else {
+        Classes::new()
+    }
+}
+
+fn invalid_for(errors: &ValidationErrors, code: &str) -> bool {
+    let errors = errors.field_errors();
+    errors
+        .get("__all__")
+        .map(|errors| errors.iter().any(|error| error.code == code))
+        .unwrap_or_default()
 }

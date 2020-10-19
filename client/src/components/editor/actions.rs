@@ -1,7 +1,7 @@
 use super::{types::Mode, Editor, Msg};
 use crate::{components::alert::Context, Rule};
 use anyhow::{format_err, Context as _, Result};
-use log::{debug, error};
+use log::error;
 use std::convert::TryInto;
 use validator::Validate;
 use yew::{
@@ -27,7 +27,6 @@ impl Editor {
     }
 
     pub(super) fn handle_fetch(&mut self) -> Result<ShouldRender> {
-        debug!("Recipe {:?}", self.state);
         let request = Request::get(format!(
             "/ajax/recipe/{}",
             self.props
@@ -137,7 +136,6 @@ impl Editor {
             Ok(true)
         } else {
             let body: shared::Recipe = self.state.clone().try_into()?;
-            debug!("Recipe {:?}", body);
             let request = Request::post("/ajax/recipe/")
                 .header("Content-Type", "application/json")
                 .body(serde_json::to_string(&body).map_err(anyhow::Error::from))
@@ -158,6 +156,7 @@ impl Editor {
                 ),
             )?;
             self.fetch_tsk = Some(task);
+            self.errors = None;
             Ok(false)
         }
     }

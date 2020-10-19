@@ -70,3 +70,16 @@ impl Default for Config {
         }
     }
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct KeyPathCompletions {
+    pub selected: Vec<String>,
+    pub kind: KeyPathKind,
+    pub candidates: Vec<KeyPathComponent>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct KeyPathComponent {
+    pub leaf: bool,
+    pub component: String,
+}

@@ -1,6 +1,6 @@
 use super::db;
 use crate::{
-    config::{self, KeyPathKind},
+    handlers,
     models::{NewRecipe, NewRule, RecipeCascaded, Rule},
     DbPool,
 };
@@ -10,14 +10,13 @@ use actix_web::{
     HttpResponse, Result,
 };
 use anyhow::bail;
-use log::debug;
 use std::convert::TryInto;
 use uuid::Uuid;
 
 #[actix_web::get("/ajax/recipe/offset/{offset}")]
 pub(crate) async fn list_recipes_page(db: Data<DbPool>, offset: Path<i64>) -> Result<HttpResponse> {
     let json = web::block(move || {
-        super::list_recipes_offset_limit(db, offset.into_inner(), super::DEFAULT_LIMIT)
+        handlers::list_recipes_offset_limit(db, offset.into_inner(), handlers::DEFAULT_LIMIT)
     })
     .await
     .map_err(ErrorInternalServerError)?;
@@ -27,7 +26,7 @@ pub(crate) async fn list_recipes_page(db: Data<DbPool>, offset: Path<i64>) -> Re
 #[actix_web::get("/ajax/recipe/")]
 pub(crate) async fn list_recipes(db: Data<DbPool>) -> Result<HttpResponse> {
     let json = web::block(move || {
-        super::list_recipes_offset_limit(db, super::DEFAULT_OFFSET, super::DEFAULT_LIMIT)
+        handlers::list_recipes_offset_limit(db, handlers::DEFAULT_OFFSET, handlers::DEFAULT_LIMIT)
     })
     .await
     .map_err(ErrorInternalServerError)?;
@@ -113,18 +112,4 @@ pub(crate) async fn delete_recipe(db_pool: Data<DbPool>, path: Path<Uuid>) -> Re
         .await
         .map_err(ErrorInternalServerError)?;
     Ok(HttpResponse::Ok().finish())
-}
-
-#[actix_web::get("/ajax/config")]
-pub(crate) async fn get_config() -> Result<HttpResponse> {
-    debug!("KEY_PATH_KIND={:?}", std::env::var("KEY_PATH_KIND"));
-    debug!("KeyPathKind={:?}", *config::KEY_PATH_KIND);
-    let config = shared::Config {
-        key_path_kind: if let KeyPathKind::Directory(_) = *config::KEY_PATH_KIND {
-            shared::KeyPathKind::Directory
-        } else {
-            shared::KeyPathKind::File
-        },
-    };
-    Ok(HttpResponse::Ok().json(config))
 }

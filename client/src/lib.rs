@@ -49,7 +49,6 @@ impl Component for Index {
     }
 
     fn view(&self) -> Html {
-        // TODO add route for offset
         html! {
             <Router<AppRoute>
                 render = Router::render(|switch: AppRoute| {

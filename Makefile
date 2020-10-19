@@ -1,4 +1,4 @@
-docker_tag=0.2.5
+docker_tag=0.3.0-beta
 
 all: client/pkg/server_bg.wasm client/pkg/bundle.js
 
@@ -11,6 +11,7 @@ client/pkg/client_bg.wasm: client/main.js \
 	client/src/components/alert/*.rs \
 	client/src/components/editor/*.rs \
 	client/src/components/editor/rule_editor/*.rs \
+	client/src/components/editor/rule_editor/key_path/*.rs \
 	client/src/components/home/*.rs \
 	client/src/types/*.rs \
 	client/src/lib.rs \
@@ -39,4 +40,4 @@ docker-branch:
 	cargo build -p empholite --release
 	docker build -t cmdln/empholite:$(docker_tag) .
 
-.PHONY: all clean client-watch docker
+.PHONY: all clean client-watch docker docker-branch
