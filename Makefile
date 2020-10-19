@@ -1,4 +1,4 @@
-docker_tag=0.3.0-beta
+docker_tag=0.3.0
 
 all: client/pkg/server_bg.wasm client/pkg/bundle.js
 

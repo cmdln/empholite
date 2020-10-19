@@ -1,6 +1,6 @@
 [package]
 name = "empholite"
-version = "0.3.0-beta"
+version = "0.3.0"
 authors = ["Thomas Gideon <cmdln@thecommandline.net>"]
 edition = "2018"
 
